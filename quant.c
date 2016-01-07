@@ -14,13 +14,13 @@ int STD_QUANT_TAB[64] =
    121, 112, 100, 120,  92, 101, 103,  99 
 };
 
-void QuantizeEncode(int *data, int *qtab)
+void quantize_encode(int *data, int *qtab)
 {
     int i;
     for (i=0; i<64; i++) data[i] /= qtab[i];
 }
 
-void QuantizeDecode(int *data, int *qtab)
+void quantize_decode(int *data, int *qtab)
 {
     int i;
     for (i=0; i<64; i++) data[i] *= qtab[i];

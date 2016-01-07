@@ -15,7 +15,7 @@ static int zigzag[64] =
 };
 
 /* º¯ÊýÊµÏÖ */
-void ZigzagEncode(int *data)
+void zigzag_encode(int *data)
 {
     int buf[64];
     int i;
@@ -24,7 +24,7 @@ void ZigzagEncode(int *data)
     for (i=0; i<64; i++) data[i] = buf[i];
 }
 
-void ZigzagDecode(int *data)
+void zigzag_decode(int *data)
 {
     int buf[64];
     int i;

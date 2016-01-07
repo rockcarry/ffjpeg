@@ -6,8 +6,8 @@ extern "C" {
 #endif
 
 /* º¯ÊıÉùÃ÷ */
-void ZigzagEncode(int *data);
-void ZigzagDecode(int *data);
+void zigzag_encode(int *data);
+void zigzag_decode(int *data);
 
 #ifdef __cplusplus
 }
