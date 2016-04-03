@@ -4,9 +4,9 @@
 /* 类型定义 */
 typedef struct
 {
+    int znum;
     int size;
-    int runlen;
-    int ampcode;
+    int code;
 } RLEITEM, *PRLEITEM;
 
 #ifdef __cplusplus
@@ -14,8 +14,8 @@ extern "C" {
 #endif
 
 /* 函数声明 */
-void RLEEncode(RLEITEM *dest, int *src, int *curdc);
-void RLEDecode(int *dest, RLEITEM *src, int *curdc);
+void rle_encode(RLEITEM *dest, int *src, int *curdc);
+void rle_decode(int *dest, RLEITEM *src, int *curdc);
 
 #ifdef __cplusplus
 }
