@@ -11,7 +11,8 @@ OBJS = \
     dct.o   \
     quant.o \
     zigzag.o\
-    rle.o
+    rle.o   \
+    huffman.o
 
 # 所有的可执行目标
 EXES = \
