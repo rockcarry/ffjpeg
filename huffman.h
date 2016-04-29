@@ -1,5 +1,5 @@
-#ifndef _HUFFMAN_H_
-#define _HUFFMAN_H_
+#ifndef __FFJPEG_HUFFMAN_H__
+#define __FFJPEG_HUFFMAN_H__
 
 /* 包含头文件 */
 #include "stdefine.h"
