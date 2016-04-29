@@ -5,6 +5,9 @@
 #if defined(WIN32)
 #include <windows.h>
 #else
+#define TRUE     1
+#define FALSE    0
+typedef int            BOOL;
 typedef unsigned char  BYTE;
 typedef unsigned short WORD;
 typedef unsigned long DWORD;
