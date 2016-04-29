@@ -4,7 +4,7 @@
 #include <string.h>
 #include "huffman.h"
 
-#define ENABLE_DUMP_CODE_LIST  1
+#define ENABLE_DEBUG_DUMP  1
 
 /* 内部函数实现 */
 /* ++ 用于快速排序的比较函数 */
@@ -24,32 +24,74 @@ static int cmp_symbol_item(const void *a, const void *b)
 }
 /* -- 用于快速排序的比较函数 */
 
-#if ENABLE_DUMP_CODE_LIST
+#if ENABLE_DEBUG_DUMP
+static void int_to_bin_str(int v, char *str, int n) {
+    int i;
+    for (i=n-1; i>=0; i--) {
+        if (v & (1 << i)) {
+            *str++ = '1';
+        }
+        else {
+            *str++ = '0';
+        }
+    }
+    *str = '\0';
+}
+
 static void dump_huffman_codelist(char *title, HUFCODEITEM *list, int n, int head)
 {
-    int i;
+    char str[33];
+    int  i;
     printf("\n+----%s----+\n", title);
     for (i=0; i<n; i++) {
-        printf("%c %c, freq:%3d, group:%3d, depth:%d\n",
+        int_to_bin_str(list[i].code, str, list[i].depth);
+        printf("%c %c, freq:%3d, group:%3d, depth:%d, code:%s\n",
             head == i ? '*' : ' ',
-            list[i].symbol, list[i].freq, list[i].group, list[i].depth);
+            list[i].symbol, list[i].freq, list[i].group, list[i].depth, str);
     }
 }
 #endif
 
-/* 计算每个符号的哈夫曼编码的码长 */
-static void calculate_code_depth(HUFCODEITEM *codelist)
+/* 函数实现 */
+/* 统计符号串中各个符号出现的频率 */
+void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream, PFNCB_BITSTR_READ readbits)
 {
+    int  data;
+    int  i;
+
+    /* 初始化频率表 */
+    for (i=0; i<256; i++)
+    {
+        codelist[i].symbol = i;
+        codelist[i].freq   = 0;
+        codelist[i].group  = i;
+        codelist[i].depth  = 1;
+        codelist[i].code   = 0;
+    }
+
+    /* 统计频率 */
+    while (1) {
+        data = readbits(stream, 8);
+        if (data == -1) break;
+        codelist[data].freq++;
+    }
+}
+
+BOOL huffman_encode_begin(HUFCODEC *phc)
+{
+    HUFCODEITEM *codelist = phc->codelist;
     HUFCODEITEM  copylist[256];
     HUFCODEITEM *templist;
+    BYTE        *huftab   = phc->huftab;
     int head;
     int group;
-    int n, i;
+    int code;
+    int n, i, j, k;
 
     /* make a copylist which is copy of codelist */
     memcpy(copylist, codelist, sizeof(HUFCODEITEM) * 256);
 
-    /* 对频率表进行快速排序 */
+    /* 对 copylist 按 freq 进行快速排序 */
     qsort(copylist, 256, sizeof(HUFCODEITEM), cmp_freq_item);
 
     /* 查找出第一个非零频率的符号
@@ -64,7 +106,7 @@ static void calculate_code_depth(HUFCODEITEM *codelist)
 
     while (head < n - 2) /* 在一个 while 循环中计算码长 */
     {
-#if ENABLE_DUMP_CODE_LIST
+#if ENABLE_DEBUG_DUMP
         // dump sorted code list
         dump_huffman_codelist(" sorted -", templist, n, head);
 #endif
@@ -81,7 +123,7 @@ static void calculate_code_depth(HUFCODEITEM *codelist)
             }
         }
 
-#if ENABLE_DUMP_CODE_LIST
+#if ENABLE_DEBUG_DUMP
         // dump updated code list
         dump_huffman_codelist(" updated ", templist, n, head);
 #endif
@@ -96,7 +138,7 @@ static void calculate_code_depth(HUFCODEITEM *codelist)
         head ++; /* 表头指针 */
         group++; /* 分组编号 */
 
-#if ENABLE_DUMP_CODE_LIST
+#if ENABLE_DEBUG_DUMP
         // dump merged code list
         dump_huffman_codelist(" merged -", templist, n, head);
 #endif
@@ -115,53 +157,75 @@ static void calculate_code_depth(HUFCODEITEM *codelist)
         }
     }
 
-#if ENABLE_DUMP_CODE_LIST
+    /* 对 templist 按 depth 进行快速排序 */
+    qsort(templist, n, sizeof(HUFCODEITEM), cmp_depth_item);
+
+#if ENABLE_DEBUG_DUMP
     // dump done code list
-    dump_huffman_codelist(" done ---", templist, n, head);
+    dump_huffman_codelist(" done ---", templist, n, -1);
+#endif
+
+    // 生成 jpeg 格式的哈夫曼表
+    memset(huftab, 0, sizeof(huftab));
+    for (i=0; i<n; i++) {
+        huftab[templist[i].depth - 1]++;
+        huftab[i + 16] = templist[i].symbol;
+    }
+
+#if ENABLE_DEBUG_DUMP
+    printf("\nhuftab:\n");
+    for (i=0; i<16; i++) {
+        printf("%d ", huftab[i]);
+    }
+    printf("\n");
+    for (i=16; i<272; i++) {
+        printf("%c ", huftab[i]);
+    }
+    printf("\n");
+#endif
+
+    k    = 0;
+    code = 0;
+    for (j=templist[0].depth-1; j<16; j++) {
+        for (i=0; i<huftab[j]; i++) {
+            templist[k++].code = code++;
+        }
+        code <<= 1;
+    }
+
+#if ENABLE_DEBUG_DUMP
+    // dump done code list
+    dump_huffman_codelist(" code ---", templist, n, -1);
 #endif
 
     for (i=0; i<n; i++) {
         codelist[templist[i].symbol].depth = templist[i].depth;
+        codelist[templist[i].symbol].code  = templist[i].code ;
     }
+
+    return TRUE;
 }
 
-/* 函数实现 */
-/* 统计符号串中各个符号出现的频率 */
-void huffman_stat_freq(HUFCODEITEM *codelist, void *stream, PFNCB_BITSTR_READ readbits)
+void huffman_encode_done(HUFCODEC *phc)
 {
-    int  data;
-    int  i;
+}
 
-    /* 初始化频率表 */
-    for (i=0; i<256; i++)
-    {
-        codelist[i].symbol = i;
-        codelist[i].freq   = 0;
-        codelist[i].group  = i;
-        codelist[i].depth  = 0;
-        codelist[i].code   = 0;
-    }
+BOOL huffman_encode_run(HUFCODEC *phc)
+{
+    /* 检查输入输出数据流的有效性 */
+    if (!phc->input || !phc->output || !phc->readbits || !phc->writebits) return FALSE;
 
-    /* 统计频率 */
+    /* 对输入码流进行编码并输出 */
     while (1) {
-        data = readbits(stream, 8);
+        int data = phc->readbits(phc->input, 8);
         if (data == -1) break;
-        codelist[data].freq++;
+        if (!phc->writebits(phc->output, phc->codelist[data].code, phc->codelist[data].depth)) {
+            return FALSE;
+        }
     }
-}
 
-BOOL huffman_encode_begin(HUFCODEC *phc)
-{
-    return FALSE;
-}
-
-void huffman_encode_done (HUFCODEC *phc)
-{
-}
-
-BOOL huffman_encode_run  (HUFCODEC *phc)
-{
-    return FALSE;
+    /* 返回成功 */
+    return TRUE;
 }
 
 BOOL huffman_decode_begin(HUFCODEC *phc)
@@ -184,61 +248,72 @@ int  huffman_decode_one  (HUFCODEC *phc)
 }
 
 
-#if 0
+#if ENABLE_DEBUG_DUMP
 int main(void)
 {
-    HUFCODEITEM codelist[256] = {0};
-    codelist['H'].symbol = 'H';
-    codelist['H'].freq   = 1;
-    codelist['H'].group  = 'H';
+    HUFCODEC hufcodec = {0};
 
-    codelist['F'].symbol = 'F';
-    codelist['F'].freq   = 2;
-    codelist['F'].group  = 'F';
+    hufcodec.codelist['H'].symbol = 'H';
+    hufcodec.codelist['H'].freq   = 1;
+    hufcodec.codelist['H'].group  = 'H';
+    hufcodec.codelist['H'].depth  = 1;
 
-    codelist['C'].symbol = 'C';
-    codelist['C'].freq   = 3;
-    codelist['C'].group  = 'C';
+    hufcodec.codelist['F'].symbol = 'F';
+    hufcodec.codelist['F'].freq   = 2;
+    hufcodec.codelist['F'].group  = 'F';
+    hufcodec.codelist['F'].depth  = 1;
 
-    codelist['J'].symbol = 'J';
-    codelist['J'].freq   = 4;
-    codelist['J'].group  = 'J';
+    hufcodec.codelist['C'].symbol = 'C';
+    hufcodec.codelist['C'].freq   = 3;
+    hufcodec.codelist['C'].group  = 'C';
+    hufcodec.codelist['C'].depth  = 1;
 
-    codelist['I'].symbol = 'I';
-    codelist['I'].freq   = 5;
-    codelist['I'].group  = 'I';
+    hufcodec.codelist['J'].symbol = 'J';
+    hufcodec.codelist['J'].freq   = 4;
+    hufcodec.codelist['J'].group  = 'J';
+    hufcodec.codelist['J'].depth  = 1;
 
-    codelist['D'].symbol = 'D';
-    codelist['D'].freq   = 7;
-    codelist['D'].group  = 'D';
+    hufcodec.codelist['I'].symbol = 'I';
+    hufcodec.codelist['I'].freq   = 5;
+    hufcodec.codelist['I'].group  = 'I';
+    hufcodec.codelist['I'].depth  = 1;
 
-    codelist['A'].symbol = 'A';
-    codelist['A'].freq   = 8;
-    codelist['A'].group  = 'A';
+    hufcodec.codelist['D'].symbol = 'D';
+    hufcodec.codelist['D'].freq   = 7;
+    hufcodec.codelist['D'].group  = 'D';
+    hufcodec.codelist['D'].depth  = 1;
 
-    codelist['E'].symbol = 'E';
-    codelist['E'].freq   = 9;
-    codelist['E'].group  = 'E';
+    hufcodec.codelist['A'].symbol = 'A';
+    hufcodec.codelist['A'].freq   = 8;
+    hufcodec.codelist['A'].group  = 'A';
+    hufcodec.codelist['A'].depth  = 1;
 
-    codelist['K'].symbol = 'K';
-    codelist['K'].freq   = 9;
-    codelist['K'].group  = 'K';
+    hufcodec.codelist['E'].symbol = 'E';
+    hufcodec.codelist['E'].freq   = 12;
+    hufcodec.codelist['E'].group  = 'E';
+    hufcodec.codelist['E'].depth  = 1;
 
-    codelist['B'].symbol = 'B';
-    codelist['B'].freq   = 16;
-    codelist['B'].group  = 'B';
+    hufcodec.codelist['K'].symbol = 'K';
+    hufcodec.codelist['K'].freq   = 9;
+    hufcodec.codelist['K'].group  = 'K';
+    hufcodec.codelist['K'].depth  = 1;
 
-    codelist['G'].symbol = 'G';
-    codelist['G'].freq   = 32;
-    codelist['G'].group  = 'G';
+    hufcodec.codelist['B'].symbol = 'B';
+    hufcodec.codelist['B'].freq   = 16;
+    hufcodec.codelist['B'].group  = 'B';
+    hufcodec.codelist['B'].depth  = 1;
 
-    calculate_code_depth(codelist);
+    hufcodec.codelist['G'].symbol = 'G';
+    hufcodec.codelist['G'].freq   = 32;
+    hufcodec.codelist['G'].group  = 'G';
+    hufcodec.codelist['G'].depth  = 1;
+
+    huffman_encode_begin(&hufcodec);
+    huffman_encode_done (&hufcodec);
 
     return 0;
 }
 #endif
-
-
 
 
 

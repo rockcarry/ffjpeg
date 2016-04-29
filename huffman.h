@@ -19,21 +19,18 @@ typedef struct
 typedef int  (*PFNCB_BITSTR_READ )(void *stream, int nbit);
 typedef int  (*PFNCB_BITSTR_WRITE)(void *stream, int nbit, int data);
 
-/* 以下的类型和全局变量用于编解码时的进度控制 */
-typedef void (*PFNCB_PROGRESS)(long total, long cur);
-
 /* 编码器类型定义 */
 typedef struct
 {
-    BYTE              *huftab;       /* 哈夫曼表     - DE */
+    BYTE               huftab[272];  /* 哈夫曼表     - DE */
     int                first[18];    /* first        - DE */
     int                index[18];    /* index        - D  */
-    HUFCODEITEM       *codelist;     /* 编码表       - E  */
-    void              *bitstr;       /* bit stream        */
+    HUFCODEITEM        codelist[256];/* 编码表       - E  */
+    void              *input;        /* input bit stream  */
+    void              *output;       /* output bit stream */
     PFNCB_BITSTR_READ  readbits;     /* read bits         */
     PFNCB_BITSTR_WRITE writebits;    /* write bits        */
-    PFNCB_PROGRESS     pps;          /* 进度回调函数 - DE */
-} HUFCODEC, *PHUFCODEC;
+} HUFCODEC;
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +38,7 @@ extern "C" {
 
 /* 函数声明 */
 /* 标准的符号频率统计器 */
-void huffman_stat_freq(HUFCODEITEM *freqlist, void *stream, PFNCB_BITSTR_READ readbits);
+void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream, PFNCB_BITSTR_READ readbits);
 
 
 /* 编码 */
