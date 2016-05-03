@@ -28,8 +28,6 @@ typedef struct
     HUFCODEITEM        codelist[256];/* 编码表       - E  */
     void              *input;        /* input bit stream  */
     void              *output;       /* output bit stream */
-    PFNCB_BITSTR_READ  readbits;     /* read bits         */
-    PFNCB_BITSTR_WRITE writebits;    /* write bits        */
 } HUFCODEC;
 
 #ifdef __cplusplus
@@ -38,7 +36,7 @@ extern "C" {
 
 /* 函数声明 */
 /* 标准的符号频率统计器 */
-void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream, PFNCB_BITSTR_READ readbits);
+void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream);
 
 
 /* 编码 */

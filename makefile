@@ -12,6 +12,7 @@ OBJS = \
     quant.o \
     zigzag.o\
     rle.o   \
+    bitstr.o\
     huffman.o
 
 # 所有的可执行目标

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "bitstr.h"
 #include "huffman.h"
 
 #define ENABLE_DEBUG_DUMP  1
@@ -54,7 +55,7 @@ static void dump_huffman_codelist(char *title, HUFCODEITEM *list, int n, int hea
 
 /* 函数实现 */
 /* 统计符号串中各个符号出现的频率 */
-void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream, PFNCB_BITSTR_READ readbits)
+void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream)
 {
     int  data;
     int  i;
@@ -71,7 +72,7 @@ void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream, PFNCB_BITSTR_REA
 
     /* 统计频率 */
     while (1) {
-        data = readbits(stream, 8);
+        data = bitstr_getc(stream);
         if (data == -1) break;
         codelist[data].freq++;
     }
@@ -213,14 +214,21 @@ void huffman_encode_done(HUFCODEC *phc)
 BOOL huffman_encode_run(HUFCODEC *phc)
 {
     /* 检查输入输出数据流的有效性 */
-    if (!phc->input || !phc->output || !phc->readbits || !phc->writebits) return FALSE;
+    if (!phc->input || !phc->output) return FALSE;
 
     /* 对输入码流进行编码并输出 */
     while (1) {
-        int data = phc->readbits(phc->input, 8);
+        int data = bitstr_getc(phc->input);
         if (data == -1) break;
-        if (!phc->writebits(phc->output, phc->codelist[data].code, phc->codelist[data].depth)) {
-            return FALSE;
+
+        {
+            int code, i;
+            code = phc->codelist[data].code;
+            for (i=phc->codelist[data].depth-1; i>=0; i--) {
+                if (EOF == bitstr_putbit((code & (1 << i)) ? 1 : 0, phc->output)) {
+                    return FALSE;
+                }
+            }
         }
     }
 
@@ -251,7 +259,7 @@ int  huffman_decode_one  (HUFCODEC *phc)
 #if ENABLE_DEBUG_DUMP
 int main(void)
 {
-    HUFCODEC hufcodec = {0};
+    HUFCODEC hufcodec;
 
     hufcodec.codelist['H'].symbol = 'H';
     hufcodec.codelist['H'].freq   = 1;
