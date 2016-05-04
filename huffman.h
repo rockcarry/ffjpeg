@@ -4,6 +4,8 @@
 /* 包含头文件 */
 #include "stdefine.h"
 
+#define MAX_HUFFMAN_CODE_LEN  16
+
 /* 类型定义 */
 /* 编码表项类型定义 */
 typedef struct
@@ -22,10 +24,10 @@ typedef int  (*PFNCB_BITSTR_WRITE)(void *stream, int nbit, int data);
 /* 编码器类型定义 */
 typedef struct
 {
-    BYTE               huftab[272];  /* 哈夫曼表     - DE */
-    int                first[18];    /* first        - DE */
-    int                index[18];    /* index        - D  */
-    HUFCODEITEM        codelist[256];/* 编码表       - E  */
+    BYTE               huftab[MAX_HUFFMAN_CODE_LEN + 256]; /* 哈夫曼表 */
+    int                first [MAX_HUFFMAN_CODE_LEN];       /* first    */
+    int                index [MAX_HUFFMAN_CODE_LEN];       /* index    */
+    HUFCODEITEM        codelist[256];/* 编码表 */
     void              *input;        /* input bit stream  */
     void              *output;       /* output bit stream */
 } HUFCODEC;

@@ -65,11 +65,16 @@ void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream)
         codelist[i].code   = 0;
     }
 
+    // 最大的频率，超过这个值，则做饱和处理
+    #define MAX_STAT_FREQ_NUM  (1ul << (MAX_HUFFMAN_CODE_LEN - 1))
+
     /* 统计频率 */
     while (1) {
         data = bitstr_getc(stream);
         if (data == EOF) break;
-        codelist[data].freq++;
+        if (codelist[(BYTE)data].freq < MAX_STAT_FREQ_NUM) {
+            codelist[(BYTE)data].freq++;
+        }
     }
 
 #if ENABLE_DEBUG_DUMP
@@ -176,16 +181,16 @@ BOOL huffman_encode_begin(HUFCODEC *phc)
     memset(huftab, 0, sizeof(huftab));
     for (i=0; i<n; i++) {
         huftab[templist[i].depth - 1]++;
-        huftab[i + 16] = templist[i].symbol;
+        huftab[i + MAX_HUFFMAN_CODE_LEN] = templist[i].symbol;
     }
 
 #if ENABLE_DEBUG_DUMP
     printf("\nhuftab:\n");
-    for (i=0; i<16; i++) {
+    for (i=0; i<MAX_HUFFMAN_CODE_LEN; i++) {
         printf("%d ", huftab[i]);
     }
     printf("\n");
-    for (i=16; i<272; i++) {
+    for (i=MAX_HUFFMAN_CODE_LEN; i<MAX_HUFFMAN_CODE_LEN+256; i++) {
         printf("%c ", huftab[i]);
     }
     printf("\n");
@@ -193,7 +198,7 @@ BOOL huffman_encode_begin(HUFCODEC *phc)
 
     k    = 0;
     code = 0;
-    for (j=templist[0].depth-1; j<16; j++) {
+    for (j=templist[0].depth-1; j<MAX_HUFFMAN_CODE_LEN; j++) {
         for (i=0; i<huftab[j]; i++) {
             templist[k++].code = code++;
         }
@@ -259,8 +264,8 @@ BOOL huffman_decode_begin(HUFCODEC *phc)
        first[i] 表示长度为 i+1 的第一个码字的值
        index[i] 表示长度为 i+1 的第一个码字的索引 */
     phc->first[0] = 0 ;
-    phc->index[0] = 16;
-    for (i=1; i<16; i++)
+    phc->index[0] = MAX_HUFFMAN_CODE_LEN;
+    for (i=1; i<MAX_HUFFMAN_CODE_LEN; i++)
     {
         phc->first[i] = (phc->first[i-1] + phc->huftab[i-1]) << 1;
         phc->index[i] =  phc->index[i-1] + phc->huftab[i-1];
@@ -268,12 +273,12 @@ BOOL huffman_decode_begin(HUFCODEC *phc)
 
 #if ENABLE_DEBUG_DUMP
     printf("\n\nfirst table:\n");
-    for (i=0; i<16; i++) {
+    for (i=0; i<MAX_HUFFMAN_CODE_LEN; i++) {
         printf("%d ", phc->first[i]);
     }
 
     printf("\n\nindex table:\n");
-    for (i=0; i<16; i++) {
+    for (i=0; i<MAX_HUFFMAN_CODE_LEN; i++) {
         printf("%d ", phc->index[i]);
     }
     printf("\n\n");
@@ -324,7 +329,7 @@ int huffman_decode_one(HUFCODEC *phc)
         printf("%d, first = %d, len = %d\n", bit ? 1 : 0, phc->first[len], len);
         code <<= 1; code |= bit;
         if (code - phc->first[len] < phc->huftab[len]) break;
-        if (++len == 16) return EOF;
+        if (++len == MAX_HUFFMAN_CODE_LEN) return EOF;
     }
 
     idx = phc->index[len] + (code - phc->first[len]);
