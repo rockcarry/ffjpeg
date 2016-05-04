@@ -1,4 +1,5 @@
 // 包含头文件
+#include <stdlib.h>
 #include "stdefine.h"
 #include "bitstr.h"
 
@@ -78,7 +79,7 @@ long bitstr_tell(void *stream)
     return ftell(context->fp);
 }
 
-int bitstr_getbit(void *stream)
+int bitstr_getb(void *stream)
 {
     int bit;
     BITSTR_CONTEXT *context = (BITSTR_CONTEXT*)stream;
@@ -86,6 +87,7 @@ int bitstr_getbit(void *stream)
 
     if (context->bitnum == 0) {
         context->bitbuf = fgetc(context->fp);
+        context->bitnum = 8;
         if (context->bitbuf == EOF) {
             return EOF;
         }
@@ -97,13 +99,13 @@ int bitstr_getbit(void *stream)
     return bit;
 }
 
-int bitstr_putbit(int b, void *stream)
+int bitstr_putb(int b, void *stream)
 {
     BITSTR_CONTEXT *context = (BITSTR_CONTEXT*)stream;
     if (!context || !context->fp) return EOF;
 
     if (context->bitnum == 8) {
-        if (EOF == fputc(context->bitnum & 0xff, context->fp)) {
+        if (EOF == fputc(context->bitbuf & 0xff, context->fp)) {
             return EOF;
         }
         context->bitbuf = 0;
@@ -122,7 +124,7 @@ int bitstr_flush(void *stream)
     if (!context || !context->fp) return EOF;
 
     if (context->bitnum != 0) {
-        if (EOF == fputc(context->bitnum & 0xff, context->fp)) {
+        if (EOF == fputc(context->bitbuf & 0xff, context->fp)) {
             return EOF;
         }
         context->bitbuf = 0;

@@ -18,11 +18,6 @@ static int cmp_depth_item(const void *a, const void *b)
 {
     return ((HUFCODEITEM*)a)->depth - ((HUFCODEITEM*)b)->depth;
 }
-
-static int cmp_symbol_item(const void *a, const void *b)
-{
-    return ((HUFCODEITEM*)a)->symbol - ((HUFCODEITEM*)b)->symbol;
-}
 /* -- 用于快速排序的比较函数 */
 
 #if ENABLE_DEBUG_DUMP
@@ -73,9 +68,20 @@ void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream)
     /* 统计频率 */
     while (1) {
         data = bitstr_getc(stream);
-        if (data == -1) break;
+        if (data == EOF) break;
         codelist[data].freq++;
     }
+
+#if ENABLE_DEBUG_DUMP
+    printf("\nstat freq:\n");
+    printf("------------\n");
+    for (i=0; i<256; i++) {
+        if (codelist[i].freq) {
+            printf("%c:%d ", codelist[i].symbol, codelist[i].freq);
+        }
+    }
+    printf("\n");
+#endif
 }
 
 BOOL huffman_encode_begin(HUFCODEC *phc)
@@ -209,6 +215,8 @@ BOOL huffman_encode_begin(HUFCODEC *phc)
 
 void huffman_encode_done(HUFCODEC *phc)
 {
+    /* flush bitstr */
+    bitstr_flush(phc->output);
 }
 
 BOOL huffman_encode_run(HUFCODEC *phc)
@@ -216,18 +224,25 @@ BOOL huffman_encode_run(HUFCODEC *phc)
     /* 检查输入输出数据流的有效性 */
     if (!phc->input || !phc->output) return FALSE;
 
+#if ENABLE_DEBUG_DUMP
+    printf("\noutput encode bit stream:\n");
+#endif
+
     /* 对输入码流进行编码并输出 */
     while (1) {
         int data = bitstr_getc(phc->input);
-        if (data == -1) break;
+        if (data == EOF) break;
 
         {
             int code, i;
             code = phc->codelist[data].code;
             for (i=phc->codelist[data].depth-1; i>=0; i--) {
-                if (EOF == bitstr_putbit((code & (1 << i)) ? 1 : 0, phc->output)) {
+                if (EOF == bitstr_putb((code & (1 << i)) ? 1 : 0, phc->output)) {
                     return FALSE;
                 }
+#if ENABLE_DEBUG_DUMP
+                printf("%d", (code & (1 << i)) ? 1 : 0);
+#endif
             }
         }
     }
@@ -238,86 +253,120 @@ BOOL huffman_encode_run(HUFCODEC *phc)
 
 BOOL huffman_decode_begin(HUFCODEC *phc)
 {
-    return FALSE;
+    int i;
+
+    /* 根据哈夫曼表构造 first 表和 index 表
+       first[i] 表示长度为 i+1 的第一个码字的值
+       index[i] 表示长度为 i+1 的第一个码字的索引 */
+    phc->first[0] = 0 ;
+    phc->index[0] = 16;
+    for (i=1; i<16; i++)
+    {
+        phc->first[i] = (phc->first[i-1] + phc->huftab[i-1]) << 1;
+        phc->index[i] =  phc->index[i-1] + phc->huftab[i-1];
+    }
+
+#if ENABLE_DEBUG_DUMP
+    printf("\n\nfirst table:\n");
+    for (i=0; i<16; i++) {
+        printf("%d ", phc->first[i]);
+    }
+
+    printf("\n\nindex table:\n");
+    for (i=0; i<16; i++) {
+        printf("%d ", phc->index[i]);
+    }
+    printf("\n\n");
+#endif
+
+    /* 返回成功 */
+    return TRUE;
 }
 
-void huffman_decode_done (HUFCODEC *phc)
+void huffman_decode_done(HUFCODEC *phc)
 {
+    /* flush bitstr */
+    bitstr_flush(phc->output);
 }
 
-BOOL huffman_decode_run  (HUFCODEC *phc)
+BOOL huffman_decode_run(HUFCODEC *phc)
 {
-    return FALSE;
+    int symbol;
+
+    /* 检查输入输出数据流的有效性 */
+    if (!phc->input || !phc->output) return FALSE;
+
+    /* decode until end of stream */
+    while (1) {
+        symbol = huffman_decode_one(phc);
+        if (symbol == EOF) break;
+        if (EOF == bitstr_putc(symbol, phc->output)) return FALSE;
+    }
+
+    /* 返回成功 */
+    return TRUE;
 }
 
-int  huffman_decode_one  (HUFCODEC *phc)
+int huffman_decode_one(HUFCODEC *phc)
 {
-    return -1;
+    int bit;
+    int code = 0;
+    int len  = 0;
+    int idx  = 0;
+
+    /* 检查输入输出数据流的有效性 */
+    if (!phc->input) return EOF;
+
+    /* 从输入流读取码字 */
+    while (1) {
+        bit = bitstr_getb(phc->input);
+        if ( bit == EOF) return EOF;
+        printf("%d, first = %d, len = %d\n", bit ? 1 : 0, phc->first[len], len);
+        code <<= 1; code |= bit;
+        if (code - phc->first[len] < phc->huftab[len]) break;
+        if (++len == 16) return EOF;
+    }
+
+    idx = phc->index[len] + (code - phc->first[len]);
+    printf("get code:%c len:%d, idx:%d\n\n", phc->huftab[idx], len, idx);
+    return idx < 256 ? phc->huftab[idx] : EOF;
 }
 
 
 #if ENABLE_DEBUG_DUMP
 int main(void)
 {
-    HUFCODEC hufcodec;
+    HUFCODEC hufencoder;
+    HUFCODEC hufdecoder;
 
-    hufcodec.codelist['H'].symbol = 'H';
-    hufcodec.codelist['H'].freq   = 1;
-    hufcodec.codelist['H'].group  = 'H';
-    hufcodec.codelist['H'].depth  = 1;
+    //++ encode test
+    hufencoder.input  = bitstr_open("test.txt" , "rb");
+    hufencoder.output = bitstr_open("test.huf", "wb");
 
-    hufcodec.codelist['F'].symbol = 'F';
-    hufcodec.codelist['F'].freq   = 2;
-    hufcodec.codelist['F'].group  = 'F';
-    hufcodec.codelist['F'].depth  = 1;
+    huffman_stat_freq(hufencoder.codelist, hufencoder.input);
+    bitstr_seek(hufencoder.input, SEEK_SET, 0);
 
-    hufcodec.codelist['C'].symbol = 'C';
-    hufcodec.codelist['C'].freq   = 3;
-    hufcodec.codelist['C'].group  = 'C';
-    hufcodec.codelist['C'].depth  = 1;
+    huffman_encode_begin(&hufencoder);
+    huffman_encode_run  (&hufencoder);
+    huffman_encode_done (&hufencoder);
 
-    hufcodec.codelist['J'].symbol = 'J';
-    hufcodec.codelist['J'].freq   = 4;
-    hufcodec.codelist['J'].group  = 'J';
-    hufcodec.codelist['J'].depth  = 1;
+    bitstr_close(hufencoder.input );
+    bitstr_close(hufencoder.output);
+    //-- encode test
 
-    hufcodec.codelist['I'].symbol = 'I';
-    hufcodec.codelist['I'].freq   = 5;
-    hufcodec.codelist['I'].group  = 'I';
-    hufcodec.codelist['I'].depth  = 1;
+    //++ decode test
+    memcpy(hufdecoder.huftab, hufencoder.huftab, 272);
 
-    hufcodec.codelist['D'].symbol = 'D';
-    hufcodec.codelist['D'].freq   = 7;
-    hufcodec.codelist['D'].group  = 'D';
-    hufcodec.codelist['D'].depth  = 1;
+    hufdecoder.input  = bitstr_open("test.huf"  , "rb");
+    hufdecoder.output = bitstr_open("decode.txt", "wb");
 
-    hufcodec.codelist['A'].symbol = 'A';
-    hufcodec.codelist['A'].freq   = 8;
-    hufcodec.codelist['A'].group  = 'A';
-    hufcodec.codelist['A'].depth  = 1;
+    huffman_decode_begin(&hufdecoder);
+    huffman_decode_run  (&hufdecoder);
+    huffman_decode_done (&hufdecoder);
 
-    hufcodec.codelist['E'].symbol = 'E';
-    hufcodec.codelist['E'].freq   = 12;
-    hufcodec.codelist['E'].group  = 'E';
-    hufcodec.codelist['E'].depth  = 1;
-
-    hufcodec.codelist['K'].symbol = 'K';
-    hufcodec.codelist['K'].freq   = 9;
-    hufcodec.codelist['K'].group  = 'K';
-    hufcodec.codelist['K'].depth  = 1;
-
-    hufcodec.codelist['B'].symbol = 'B';
-    hufcodec.codelist['B'].freq   = 16;
-    hufcodec.codelist['B'].group  = 'B';
-    hufcodec.codelist['B'].depth  = 1;
-
-    hufcodec.codelist['G'].symbol = 'G';
-    hufcodec.codelist['G'].freq   = 32;
-    hufcodec.codelist['G'].group  = 'G';
-    hufcodec.codelist['G'].depth  = 1;
-
-    huffman_encode_begin(&hufcodec);
-    huffman_encode_done (&hufcodec);
+    bitstr_close(hufdecoder.input );
+    bitstr_close(hufdecoder.output);
+    //-- decode test
 
     return 0;
 }
