@@ -5,7 +5,7 @@
 #include "bitstr.h"
 #include "huffman.h"
 
-#define ENABLE_DEBUG_DUMP  1
+#define ENABLE_DEBUG_DUMP  0
 
 /* 内部函数实现 */
 /* ++ 用于快速排序的比较函数 */
@@ -311,7 +311,7 @@ BOOL huffman_decode_run(HUFCODEC *phc)
     while (1) {
         symbol = huffman_decode_one(phc);
         if (symbol == EOF) {
-            printf("get the EOF from huffman decoder !\n");
+//          printf("get the EOF from huffman decoder !\n");
             break;
         }
         if (EOF == bitstr_putc(symbol, phc->output)) {
@@ -338,19 +338,19 @@ int huffman_decode_one(HUFCODEC *phc)
     while (1) {
         bit = bitstr_getb(phc->input);
         if ( bit == EOF) return EOF;
-        printf("%d, first = %d, len = %d\n", bit ? 1 : 0, phc->first[len], len);
+//      printf("%d, first = %d, len = %d\n", bit ? 1 : 0, phc->first[len], len);
         code <<= 1; code |= bit;
         if (code - phc->first[len] < phc->huftab[len]) break;
         if (++len == MAX_HUFFMAN_CODE_LEN) return EOF;
     }
 
     idx = phc->index[len] + (code - phc->first[len]);
-    printf("get code:%c len:%d, idx:%d\n\n", phc->huftab[idx], len, idx);
+//  printf("get code:%c len:%d, idx:%d\n\n", phc->huftab[idx], len, idx);
     return idx < MAX_HUFFMAN_CODE_LEN + 256 ? phc->huftab[idx] : EOF;
 }
 
 
-#if ENABLE_DEBUG_DUMP
+#if 0
 int main(void)
 {
     HUFCODEC hufencoder;
