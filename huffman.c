@@ -180,7 +180,9 @@ BOOL huffman_encode_begin(HUFCODEC *phc)
     // 生成 jpeg 格式的哈夫曼表
     memset(huftab, 0, sizeof(huftab));
     for (i=0; i<n; i++) {
-        huftab[templist[i].depth - 1]++;
+        if (huftab[templist[i].depth - 1] < 0xff) {
+            huftab[templist[i].depth - 1]++;
+        }
         huftab[i + MAX_HUFFMAN_CODE_LEN] = templist[i].symbol;
     }
 
@@ -206,6 +208,10 @@ BOOL huffman_encode_begin(HUFCODEC *phc)
     }
 
 #if ENABLE_DEBUG_DUMP
+    for (i=0; i<n; i++) {
+        templist[i].freq  = codelist[templist[i].symbol].freq ;
+        templist[i].group = codelist[templist[i].symbol].group;
+    }
     // dump done code list
     dump_huffman_codelist(" code ---", templist, n, -1);
 #endif
@@ -304,8 +310,14 @@ BOOL huffman_decode_run(HUFCODEC *phc)
     /* decode until end of stream */
     while (1) {
         symbol = huffman_decode_one(phc);
-        if (symbol == EOF) break;
-        if (EOF == bitstr_putc(symbol, phc->output)) return FALSE;
+        if (symbol == EOF) {
+            printf("get the EOF from huffman decoder !\n");
+            break;
+        }
+        if (EOF == bitstr_putc(symbol, phc->output)) {
+            printf("failed to write data to bit stream !\n");
+            return FALSE;
+        }
     }
 
     /* 返回成功 */
@@ -334,7 +346,7 @@ int huffman_decode_one(HUFCODEC *phc)
 
     idx = phc->index[len] + (code - phc->first[len]);
     printf("get code:%c len:%d, idx:%d\n\n", phc->huftab[idx], len, idx);
-    return idx < 256 ? phc->huftab[idx] : EOF;
+    return idx < MAX_HUFFMAN_CODE_LEN + 256 ? phc->huftab[idx] : EOF;
 }
 
 
@@ -360,7 +372,7 @@ int main(void)
     //-- encode test
 
     //++ decode test
-    memcpy(hufdecoder.huftab, hufencoder.huftab, 272);
+    memcpy(hufdecoder.huftab, hufencoder.huftab, sizeof(hufdecoder.huftab));
 
     hufdecoder.input  = bitstr_open("test.huf"  , "rb");
     hufdecoder.output = bitstr_open("decode.txt", "wb");
