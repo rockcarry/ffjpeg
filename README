@@ -5,7 +5,7 @@ ffjpeg is a simple jpeg encoding and decoding implemention.
 
 jpeg is the most popular image compress standard. for most people, it's just a .jpg picture,
 but for me and other software engineer, we want to understand how it working, how to compress
-image into jpeg format.
+image into jpeg format, and how to display a jpeg file on screen.
 
 after studying related courses at university, maybe every known what's jpeg. many documents and
 books, also tell you how to do jpeg encoding or decoding, and how data are stored in jpeg files.
@@ -16,7 +16,7 @@ maybe some one will say, there is no need to invention wheel again. but i say, i
 code, you will never really know how it work, and how to optimize it. the jpeg standard is the
 most important standard, and also the foundation, of image and video compression. if you want
 to study more about video compression, you should write a correct jpeg encoding/decoding code
-by you self.
+by you self first.
 
 i was studied jpeg standard at my university period. but i spent lots of time to write a really
 correct code. after many years, someone ask me how to encoding and decoding jpeg. i rewrite all
