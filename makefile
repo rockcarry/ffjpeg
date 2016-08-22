@@ -7,13 +7,14 @@ CCFLAGS = -Wall
 
 # 所有的目标文件
 OBJS = \
-    color.o \
-    dct.o   \
-    quant.o \
-    zigzag.o\
-    rle.o   \
-    bitstr.o\
-    huffman.o
+    color.o   \
+    dct.o     \
+    quant.o   \
+    zigzag.o  \
+    rle.o     \
+    bitstr.o  \
+    huffman.o \
+    jfif.o
 
 # 所有的可执行目标
 EXES = \
