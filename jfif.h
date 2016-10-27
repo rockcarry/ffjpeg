@@ -5,11 +5,9 @@
 extern "C" {
 #endif
 
-/* 类型定义 */
-typedef (*PFN_JFIF_CB)(int seg_type, void *data, int len);
-
 /* 函数声明 */
-void* jfif_load(char *file, PFN_JFIF_CB callback);
+void* jfif_load(char *file);
+int   jfif_save(void *ctxt, char *file);
 void  jfif_free(void *ctxt);
 
 #ifdef __cplusplus
