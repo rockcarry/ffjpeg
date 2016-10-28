@@ -7,7 +7,7 @@ jpeg is the most popular image compress standard. for most people, it's just a .
 but for me and other software engineer, we want to understand how it working, how to compress
 image into jpeg format, and how to display a jpeg file on screen.
 
-after studying related courses at university, maybe every known what's jpeg. many documents and
+after studying related courses at university, maybe everyone known what's jpeg. many documents and
 books, also tell you how to do jpeg encoding or decoding, and how data are stored in jpeg files.
 but the most important thing is how to write code, how to debug, and finally make a correct code
 by your self, to decode and display a jpeg file on your screen. it's interesting but challenging.
