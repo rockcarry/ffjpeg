@@ -357,8 +357,8 @@ int main(void)
     HUFCODEC hufdecoder;
 
     //++ encode test
-    hufencoder.input  = bitstr_open("test.txt" , "rb");
-    hufencoder.output = bitstr_open("test.huf", "wb");
+    hufencoder.input  = bitstr_open(FILE_BITSTR, "test.txt", "rb");
+    hufencoder.output = bitstr_open(FILE_BITSTR, "test.huf", "wb");
 
     huffman_stat_freq(hufencoder.codelist, hufencoder.input);
     bitstr_seek(hufencoder.input, SEEK_SET, 0);
@@ -374,8 +374,8 @@ int main(void)
     //++ decode test
     memcpy(hufdecoder.huftab, hufencoder.huftab, sizeof(hufdecoder.huftab));
 
-    hufdecoder.input  = bitstr_open("test.huf"  , "rb");
-    hufdecoder.output = bitstr_open("decode.txt", "wb");
+    hufdecoder.input  = bitstr_open(FILE_BITSTR, "test.huf"  , "rb");
+    hufdecoder.output = bitstr_open(FILE_BITSTR, "decode.txt", "wb");
 
     huffman_decode_begin(&hufdecoder);
     huffman_decode_run  (&hufdecoder);
