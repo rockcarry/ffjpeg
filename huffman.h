@@ -17,19 +17,15 @@ typedef struct
     int code;   /* 码字 */
 } HUFCODEITEM;
 
-/* bit stream 读写函数接口 */
-typedef int  (*PFNCB_BITSTR_READ )(void *stream, int nbit);
-typedef int  (*PFNCB_BITSTR_WRITE)(void *stream, int nbit, int data);
-
 /* 编码器类型定义 */
 typedef struct
 {
-    BYTE               huftab[MAX_HUFFMAN_CODE_LEN + 256]; /* 哈夫曼表 */
-    int                first [MAX_HUFFMAN_CODE_LEN];       /* first    */
-    int                index [MAX_HUFFMAN_CODE_LEN];       /* index    */
-    HUFCODEITEM        codelist[256];/* 编码表 */
-    void              *input;        /* input bit stream  */
-    void              *output;       /* output bit stream */
+    BYTE         huftab[MAX_HUFFMAN_CODE_LEN + 256]; /* 哈夫曼表 */
+    int          first [MAX_HUFFMAN_CODE_LEN];       /* first    */
+    int          index [MAX_HUFFMAN_CODE_LEN];       /* index    */
+    HUFCODEITEM  codelist[256];/* 编码表 */
+    void        *input;        /* input bit stream  */
+    void        *output;       /* output bit stream */
 } HUFCODEC;
 
 #ifdef __cplusplus
