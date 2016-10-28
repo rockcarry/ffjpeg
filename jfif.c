@@ -3,28 +3,26 @@
 #include <stdio.h>
 #include <string.h>
 #include "stdefine.h"
+#include "huffman.h"
 #include "jfif.h"
 
 // 预编译开关
-#define TEST_JFIF  0
+#define TEST_JFIF  1
 
 // 内部类型定义
 typedef struct {
     // width & height
-    int   width;
-    int   height;
+    int       width;
+    int       height;
 
     // quantization table
-    int   nqtab;
-    int  *pqtab[16];
+    int      *pqtab[16];
 
-    // huffman table ac
-    int   nhtabac;
-    BYTE *phtabac[16];
+    // huffman codec ac
+    HUFCODEC *phcac[16];
 
-    // huffman table dc
-    int   nhtabdc;
-    BYTE *phtabdc[16];
+    // huffman codec dc
+    HUFCODEC *phcdc[16];
 
     // components
     int comp_num;
@@ -52,8 +50,8 @@ static void jfif_dump(JFIF *jfif)
     printf("height: %d\n", jfif->height);
     printf("\n");
 
-    printf("nqtab : %d\n", jfif->nqtab );
-    for (i=0; i<jfif->nqtab; i++) {
+    for (i=0; i<16; i++) {
+        if (!jfif->pqtab[i]) continue;
         printf("qtab%d\n", i);
         for (j=0; j<64; j++) {
             printf("%3d,%c", jfif->pqtab[i][j], j%8 == 7 ? '\n' : ' ');
@@ -61,32 +59,28 @@ static void jfif_dump(JFIF *jfif)
         printf("\n");
     }
 
-    printf("nhtabac : %d\n", jfif->nhtabac);
-    for (i=0; i<jfif->nqtab; i++) {
-        int size = 0;
+    for (i=0; i<16; i++) {
+        int size = 16;
+        if (!jfif->phcac[i]) continue;
         printf("htabac%d\n", i);
         for (j=0; j<16; j++) {
-            size += jfif->phtabac[i][j];
-            printf("%3d, ", jfif->phtabac[i][j]);
+            size += jfif->phcac[i]->huftab[j];
         }
-        printf("\n");
         for (j=0; j<size; j++) {
-            printf("%3d,%c", jfif->phtabac[i][16 + j], j%16 == 15 ? '\n' : ' ');
+            printf("%3d,%c", jfif->phcac[i]->huftab[j], j%16 == 15 ? '\n' : ' ');
         }
         printf("\n\n");
     }
 
-    printf("nhtabdc : %d\n", jfif->nhtabdc);
-    for (i=0; i<jfif->nqtab; i++) {
-        int size = 0;
+    for (i=0; i<16; i++) {
+        int size = 16;
+        if (!jfif->phcdc[i]) continue;
         printf("htabdc%d\n", i);
         for (j=0; j<16; j++) {
-            size += jfif->phtabdc[i][j];
-            printf("%3d, ", jfif->phtabdc[i][j]);
+            size += jfif->phcdc[i]->huftab[j];
         }
-        printf("\n");
         for (j=0; j<size; j++) {
-            printf("%3d,%c", jfif->phtabdc[i][16 + j], j%16 == 15 ? '\n' : ' ');
+            printf("%3d,%c", jfif->phcdc[i]->huftab[j], j%16 == 15 ? '\n' : ' ');
         }
         printf("\n\n");
     }
@@ -174,8 +168,7 @@ void* jfif_load(char *file)
         case 0xdb: { // DQT
                 int idx = buf[0] & 0x0f;
                 int f16 = buf[0] & 0xf0;
-                jfif->nqtab++;
-                if (!jfif->pqtab[idx]) jfif->pqtab[idx] = malloc(64 * sizeof(int));
+                if (!jfif->pqtab[idx]) jfif->pqtab[idx] = calloc(1, 64 * sizeof(int));
                 if (!jfif->pqtab[idx]) break;
                 if (f16) { // 16bit
                     for (i=0; i<64; i++) {
@@ -196,16 +189,12 @@ void* jfif_load(char *file)
                 int size = 0;
                 for (i=1; i<1+16; i++) size += buf[i];
                 if (fac) {
-                    jfif->nhtabac++;
-                    if (jfif->phtabac[idx]) free(jfif->phtabac[idx]);
-                    jfif->phtabac[idx] = malloc(16 + size);
-                    if (jfif->phtabac[idx]) memcpy(jfif->phtabac[idx], &buf[1], 16 + size);
+                    if (!jfif->phcac[idx]) jfif->phcac[idx] = calloc(1, sizeof(HUFCODEC));
+                    if ( jfif->phcac[idx]) memcpy(jfif->phcac[idx]->huftab, &buf[1], 16 + size);
                 }
                 else {
-                    jfif->nhtabdc++;
-                    if (jfif->phtabdc[idx]) free(jfif->phtabdc[idx]);
-                    jfif->phtabdc[idx] = malloc(16 + size);
-                    if (jfif->phtabdc[idx]) memcpy(jfif->phtabdc[idx], &buf[1], 16 + size);
+                    if (!jfif->phcdc[idx]) jfif->phcdc[idx] = calloc(1, sizeof(HUFCODEC));
+                    if ( jfif->phcdc[idx]) memcpy(jfif->phcdc[idx]->huftab, &buf[1], 16 + size);
                 }
             }
             break;
@@ -215,7 +204,7 @@ void* jfif_load(char *file)
 read_data:
     fseek(fp, 0, SEEK_END);
     jfif->datalen = ftell(fp) - offset;
-    jfif->databuf = malloc(jfif->datalen);
+    jfif->databuf = calloc(1, jfif->datalen);
     if (jfif->databuf) {
         fseek(fp, offset, SEEK_SET);
         fread(jfif->databuf, jfif->datalen, 1, fp);
@@ -247,17 +236,16 @@ int jfif_save(void *ctxt, char *file)
     fputc(0xd8, fp);
 
     // output DQT
-    for (i=0; i<jfif->nqtab; i++) {
+    for (i=0; i<16; i++) {
+        if (!jfif->pqtab[i]) continue;
         len = 2 + 1 + 64;
         fputc(0xff, fp);
         fputc(0xdb, fp);
         fputc(len >> 8, fp);
         fputc(len >> 0, fp);
         fputc(i   , fp);
-        if (jfif->pqtab[i]) {
-            for (j=0; j<64; j++) {
-                fputc(jfif->pqtab[i][j], fp);
-            }
+        for (j=0; j<64; j++) {
+            fputc(jfif->pqtab[i][j], fp);
         }
     }
 
@@ -280,31 +268,29 @@ int jfif_save(void *ctxt, char *file)
     }
 
     // output DHT AC
-    for (i=0; i<jfif->nhtabac; i++) {
+    for (i=0; i<16; i++) {
+        if (!jfif->phcac[i]) continue;
         fputc(0xff, fp);
         fputc(0xc4, fp);
         len = 2 + 1 + 16;
-        for (j=0; j<16; j++) len += jfif->phtabac[i][j];
+        for (j=0; j<16; j++) len += jfif->phcac[i]->huftab[j];
         fputc(len >> 8, fp);
         fputc(len >> 0, fp);
         fputc(i + 0x10, fp);
-        if (jfif->phtabac[i]) {
-            fwrite(jfif->phtabac[i], len - 3, 1, fp);
-        }
+        fwrite(jfif->phcac[i]->huftab, len - 3, 1, fp);
     }
 
     // output DHT DC
-    for (i=0; i<jfif->nhtabdc; i++) {
+    for (i=0; i<16; i++) {
+        if (!jfif->phcdc[i]) continue;
         fputc(0xff, fp);
         fputc(0xc4, fp);
         len = 2 + 1 + 16;
-        for (j=0; j<16; j++) len += jfif->phtabdc[i][j];
+        for (j=0; j<16; j++) len += jfif->phcdc[i]->huftab[j];
         fputc(len >> 8, fp);
         fputc(len >> 0, fp);
         fputc(i + 0x00, fp);
-        if (jfif->phtabdc[i]) {
-            fwrite(jfif->phtabdc[i], len - 3, 1, fp);
-        }
+        fwrite(jfif->phcdc[i]->huftab, len - 3, 1, fp);
     }
 
     // output SOS
@@ -339,9 +325,9 @@ void jfif_free(void *ctxt)
     int   i;
     if (!jfif) return;
     for (i=0; i<16; i++) {
-        if (jfif->pqtab[i]  ) free(jfif->pqtab[i]  );
-        if (jfif->phtabac[i]) free(jfif->phtabac[i]);
-        if (jfif->phtabdc[i]) free(jfif->phtabdc[i]);
+        if (jfif->pqtab[i]) free(jfif->pqtab[i]);
+        if (jfif->phcac[i]) free(jfif->phcac[i]);
+        if (jfif->phcdc[i]) free(jfif->phcdc[i]);
     }
     if (jfif->databuf) free(jfif->databuf);
     free(jfif);
