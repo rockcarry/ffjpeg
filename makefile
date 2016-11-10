@@ -11,7 +11,6 @@ OBJS = \
     dct.o     \
     quant.o   \
     zigzag.o  \
-    rle.o     \
     bitstr.o  \
     huffman.o \
     jfif.o
