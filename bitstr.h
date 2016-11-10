@@ -9,8 +9,8 @@ extern "C" {
 #endif
 
 enum {
-    MEM_BITSTR = 0,
-    FILE_BITSTR,
+    BITSTR_MEM = 0,
+    BITSTR_FILE,
 };
 
 /* º¯ÊýÉùÃ÷ */

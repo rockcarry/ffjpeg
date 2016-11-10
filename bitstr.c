@@ -20,7 +20,7 @@ static void* mbitstr_open(void *buf, int len)
 {
     MBITSTR *context = calloc(1, sizeof(MBITSTR));
     if (!context) return NULL;
-    context->type   = MEM_BITSTR;
+    context->type   = BITSTR_MEM;
     context->membuf = buf;
     context->memlen = len;
     return context;
@@ -87,9 +87,9 @@ static int mbitstr_getb(void *stream)
             return EOF;
         }
     }
-    
-    bit = context->bitbuf & (1 << 0);
-    context->bitbuf >>= 1;
+
+    bit = (context->bitbuf >> 7) & (1 << 0);
+    context->bitbuf <<= 1;
     context->bitnum--;
     return bit;
 }
@@ -99,6 +99,10 @@ static int mbitstr_putb(int b, void *stream)
     MBITSTR *context = (MBITSTR*)stream;
     if (!context) return EOF;
 
+    context->bitbuf <<= 1;
+    context->bitbuf  |= b;
+    context->bitnum++;
+
     if (context->bitnum == 8) {
         if (EOF == mbitstr_putc(context->bitbuf & 0xff, context)) {
             return EOF;
@@ -107,9 +111,6 @@ static int mbitstr_putb(int b, void *stream)
         context->bitnum = 0;
     }
 
-    b &= (1 << 0);
-    context->bitbuf |= (b << context->bitnum);
-    context->bitnum++;
     return b;
 }
 
@@ -135,7 +136,7 @@ static void* fbitstr_open(char *file, char *mode)
     FBITSTR *context = calloc(1, sizeof(FBITSTR));
     if (!context) return NULL;
 
-    context->type = FILE_BITSTR;
+    context->type = BITSTR_FILE;
     context->fp   = fopen(file, mode);
     if (!context->fp) {
         free(context);
@@ -196,9 +197,9 @@ static int fbitstr_getb(void *stream)
             return EOF;
         }
     }
-    
-    bit = context->bitbuf & (1 << 0);
-    context->bitbuf >>= 1;
+
+    bit = (context->bitbuf >> 7) & (1 << 0);
+    context->bitbuf <<= 1;
     context->bitnum--;
     return bit;
 }
@@ -208,6 +209,10 @@ static int fbitstr_putb(int b, void *stream)
     FBITSTR *context = (FBITSTR*)stream;
     if (!context || !context->fp) return EOF;
 
+    context->bitbuf <<= 1;
+    context->bitbuf  |= b;
+    context->bitnum++;
+
     if (context->bitnum == 8) {
         if (EOF == fputc(context->bitbuf & 0xff, context->fp)) {
             return EOF;
@@ -216,9 +221,6 @@ static int fbitstr_putb(int b, void *stream)
         context->bitnum = 0;
     }
 
-    b &= (1 << 0);
-    context->bitbuf |= (b << context->bitnum);
-    context->bitnum++;
     return b;
 }
 
@@ -245,8 +247,8 @@ static int fbitstr_flush(void *stream)
 void* bitstr_open(int type, char *file, char *mode)
 {
     switch (type) {
-    case MEM_BITSTR : return mbitstr_open((void*)file, (int  )mode);
-    case FILE_BITSTR: return fbitstr_open((char*)file, (char*)mode);
+    case BITSTR_MEM : return mbitstr_open((void*)file, (int  )mode);
+    case BITSTR_FILE: return fbitstr_open((char*)file, (char*)mode);
     }
     return NULL;
 }
@@ -255,8 +257,8 @@ int bitstr_close(void *stream)
 {
     int type = *(int*)stream;
     switch (type) {
-    case MEM_BITSTR : return mbitstr_close(stream);
-    case FILE_BITSTR: return fbitstr_close(stream);
+    case BITSTR_MEM : return mbitstr_close(stream);
+    case BITSTR_FILE: return fbitstr_close(stream);
     }
     return EOF;
 }
@@ -265,8 +267,8 @@ int bitstr_getc(void *stream)
 {
     int type = *(int*)stream;
     switch (type) {
-    case MEM_BITSTR : return mbitstr_getc(stream);
-    case FILE_BITSTR: return fbitstr_getc(stream);
+    case BITSTR_MEM : return mbitstr_getc(stream);
+    case BITSTR_FILE: return fbitstr_getc(stream);
     }
     return EOF;
 }
@@ -275,8 +277,8 @@ int bitstr_putc(int c, void *stream)
 {
     int type = *(int*)stream;
     switch (type) {
-    case MEM_BITSTR : return mbitstr_putc(c, stream);
-    case FILE_BITSTR: return fbitstr_putc(c, stream);
+    case BITSTR_MEM : return mbitstr_putc(c, stream);
+    case BITSTR_FILE: return fbitstr_putc(c, stream);
     }
     return EOF;
 }
@@ -285,8 +287,8 @@ int bitstr_seek(void *stream, long offset, int origin)
 {
     int type = *(int*)stream;
     switch (type) {
-    case MEM_BITSTR : return mbitstr_seek(stream, offset, origin);
-    case FILE_BITSTR: return fbitstr_seek(stream, offset, origin);
+    case BITSTR_MEM : return mbitstr_seek(stream, offset, origin);
+    case BITSTR_FILE: return fbitstr_seek(stream, offset, origin);
     }
     return EOF;
 }
@@ -295,8 +297,8 @@ long bitstr_tell(void *stream)
 {
     int type = *(int*)stream;
     switch (type) {
-    case MEM_BITSTR : return mbitstr_tell(stream);
-    case FILE_BITSTR: return fbitstr_tell(stream);
+    case BITSTR_MEM : return mbitstr_tell(stream);
+    case BITSTR_FILE: return fbitstr_tell(stream);
     }
     return EOF;
 }
@@ -305,8 +307,8 @@ int bitstr_getb(void *stream)
 {
     int type = *(int*)stream;
     switch (type) {
-    case MEM_BITSTR : return mbitstr_getb(stream);
-    case FILE_BITSTR: return fbitstr_getb(stream);
+    case BITSTR_MEM : return mbitstr_getb(stream);
+    case BITSTR_FILE: return fbitstr_getb(stream);
     }
     return EOF;
 }
@@ -315,8 +317,8 @@ int bitstr_putb(int b, void *stream)
 {
     int type = *(int*)stream;
     switch (type) {
-    case MEM_BITSTR : return mbitstr_putb(b, stream);
-    case FILE_BITSTR: return fbitstr_putb(b, stream);
+    case BITSTR_MEM : return mbitstr_putb(b, stream);
+    case BITSTR_FILE: return fbitstr_putb(b, stream);
     }
     return EOF;
 }
@@ -325,8 +327,8 @@ int bitstr_flush(void *stream)
 {
     int type = *(int*)stream;
     switch (type) {
-    case MEM_BITSTR : return mbitstr_flush(stream);
-    case FILE_BITSTR: return fbitstr_flush(stream);
+    case BITSTR_MEM : return mbitstr_flush(stream);
+    case BITSTR_FILE: return fbitstr_flush(stream);
     }
     return EOF;
 }
