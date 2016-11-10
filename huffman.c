@@ -5,6 +5,7 @@
 #include "bitstr.h"
 #include "huffman.h"
 
+#define TEST_HUFFMAN       0
 #define ENABLE_DEBUG_DUMP  0
 
 /* 内部函数实现 */
@@ -89,7 +90,7 @@ void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream)
 #endif
 }
 
-BOOL huffman_encode_begin(HUFCODEC *phc)
+BOOL huffman_encode_init(HUFCODEC *phc)
 {
     HUFCODEITEM *codelist = phc->codelist;
     HUFCODEITEM  copylist[256];
@@ -178,11 +179,9 @@ BOOL huffman_encode_begin(HUFCODEC *phc)
 #endif
 
     // 生成 jpeg 格式的哈夫曼表
-    memset(huftab, 0, sizeof(huftab));
+    memset(huftab, 0, MAX_HUFFMAN_CODE_LEN);
     for (i=0; i<n; i++) {
-        if (huftab[templist[i].depth - 1] < 0xff) {
-            huftab[templist[i].depth - 1]++;
-        }
+        huftab[templist[i].depth - 1]++;
         huftab[i + MAX_HUFFMAN_CODE_LEN] = templist[i].symbol;
     }
 
@@ -262,7 +261,7 @@ BOOL huffman_encode_run(HUFCODEC *phc)
     return TRUE;
 }
 
-BOOL huffman_decode_begin(HUFCODEC *phc)
+BOOL huffman_decode_init(HUFCODEC *phc)
 {
     int i;
 
@@ -296,8 +295,7 @@ BOOL huffman_decode_begin(HUFCODEC *phc)
 
 void huffman_decode_done(HUFCODEC *phc)
 {
-    /* flush bitstr */
-    bitstr_flush(phc->output);
+    // do nothing
 }
 
 BOOL huffman_decode_run(HUFCODEC *phc)
@@ -309,7 +307,7 @@ BOOL huffman_decode_run(HUFCODEC *phc)
 
     /* decode until end of stream */
     while (1) {
-        symbol = huffman_decode_one(phc);
+        symbol = huffman_decode_step(phc);
         if (symbol == EOF) {
 //          printf("get the EOF from huffman decoder !\n");
             break;
@@ -324,7 +322,7 @@ BOOL huffman_decode_run(HUFCODEC *phc)
     return TRUE;
 }
 
-int huffman_decode_one(HUFCODEC *phc)
+int huffman_decode_step(HUFCODEC *phc)
 {
     int bit;
     int code = 0;
@@ -350,22 +348,22 @@ int huffman_decode_one(HUFCODEC *phc)
 }
 
 
-#if 0
+#if TEST_HUFFMAN
 int main(void)
 {
     HUFCODEC hufencoder;
     HUFCODEC hufdecoder;
 
     //++ encode test
-    hufencoder.input  = bitstr_open(FILE_BITSTR, "test.txt", "rb");
-    hufencoder.output = bitstr_open(FILE_BITSTR, "test.huf", "wb");
+    hufencoder.input  = bitstr_open(BITSTR_FILE, "test.txt", "rb");
+    hufencoder.output = bitstr_open(BITSTR_FILE, "test.huf", "wb");
 
     huffman_stat_freq(hufencoder.codelist, hufencoder.input);
     bitstr_seek(hufencoder.input, SEEK_SET, 0);
 
-    huffman_encode_begin(&hufencoder);
-    huffman_encode_run  (&hufencoder);
-    huffman_encode_done (&hufencoder);
+    huffman_encode_init(&hufencoder);
+    huffman_encode_run (&hufencoder);
+    huffman_encode_done(&hufencoder);
 
     bitstr_close(hufencoder.input );
     bitstr_close(hufencoder.output);
@@ -374,12 +372,12 @@ int main(void)
     //++ decode test
     memcpy(hufdecoder.huftab, hufencoder.huftab, sizeof(hufdecoder.huftab));
 
-    hufdecoder.input  = bitstr_open(FILE_BITSTR, "test.huf"  , "rb");
-    hufdecoder.output = bitstr_open(FILE_BITSTR, "decode.txt", "wb");
+    hufdecoder.input  = bitstr_open(BITSTR_FILE, "test.huf"  , "rb");
+    hufdecoder.output = bitstr_open(BITSTR_FILE, "decode.txt", "wb");
 
-    huffman_decode_begin(&hufdecoder);
-    huffman_decode_run  (&hufdecoder);
-    huffman_decode_done (&hufdecoder);
+    huffman_decode_init(&hufdecoder);
+    huffman_decode_run (&hufdecoder);
+    huffman_decode_done(&hufdecoder);
 
     bitstr_close(hufdecoder.input );
     bitstr_close(hufdecoder.output);
