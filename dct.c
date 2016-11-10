@@ -4,7 +4,7 @@
 #if 1 /* 快速的整数运算版本 */
 /* 内部常量定义 */
 #define DCTSIZE  8
-#define OUTSIZE  16
+#define OUTSIZE  8
 
 /* 内部全局变量定义 */
 static int enfactor[64] =
