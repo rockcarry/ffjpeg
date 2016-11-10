@@ -3,7 +3,11 @@
 #include <stdio.h>
 #include <string.h>
 #include "stdefine.h"
+#include "bitstr.h"
 #include "huffman.h"
+#include "quant.h"
+#include "zigzag.h"
+#include "dct.h"
 #include "jfif.h"
 
 // 预编译开关
@@ -100,7 +104,49 @@ static void jfif_dump(JFIF *jfif)
     printf("datalen : %d\n", jfif->datalen);
     printf("-- jfif dump --\n");
 }
+
+static void dump_du(int *du)
+{
+    int i;
+    for (i=0; i<64; i++) {
+        printf("%3d%c", du[i], i % 8 == 7 ? '\n' : ' ');
+    }
+    printf("\n");
+}
 #endif
+
+static int ALIGN(int x, int y) {
+    // y must be a power of 2.
+    return (x + y - 1) & ~(y - 1);
+}
+
+static int bitstr_get_bits(void *stream, int n)
+{
+    int buf = 0;
+    while (n--) {
+        buf <<= 1;
+        buf  |= bitstr_getb(stream);
+    }
+    return buf;
+}
+
+static void category_encode(int *size, int *code)
+{
+    WORD amp  = (WORD)abs(*code);
+    WORD mask = (1 << 15);
+    int  i    = 15;
+    if (amp == 0) { *size = 0; return; }
+    while (i && !(amp & mask)) { mask >>= 1; i--; }
+    *size = i + 1;
+    if (*code < 0) *code = (1 << *size) - amp - 1;
+}
+
+static void category_decode(int *size, int *code)
+{
+    if (*code < (1 << (*size - 1))) {
+        *code += 1 - (1 << *size);
+    }
+}
 
 /* 函数实现 */
 void* jfif_load(char *file)
@@ -333,10 +379,135 @@ void jfif_free(void *ctxt)
     free(jfif);
 }
 
+int jfif_decode(void *ctxt, BYTE *out[4])
+{
+    JFIF *jfif = (JFIF*)ctxt;
+    void *bs   = NULL;
+    int   i, c, h, v;
+    int   dc[4]= {0};
+    int   mcuw, mcuh, mcuc, mcur, mcui, jw, jh;
+    int   sfh_max = 0;
+    int   sfv_max = 0;
+
+    if (!ctxt || !out) {
+        printf("invalid input params !\n");
+        return -1;
+    }
+
+    //++ calculate mcu info
+    for (c=0; c<jfif->comp_num; c++) {
+        if (sfh_max < jfif->comp_info[c].samp_factor_h) {
+            sfh_max = jfif->comp_info[c].samp_factor_h;
+        }
+        if (sfv_max < jfif->comp_info[c].samp_factor_v) {
+            sfv_max = jfif->comp_info[c].samp_factor_v;
+        }
+    }
+    mcuw = sfh_max * 8;
+    mcuh = sfv_max * 8;
+    jw = ALIGN(jfif->width , mcuw);
+    jh = ALIGN(jfif->height, mcuh);
+    mcuc = jw / mcuw;
+    mcur = jh / mcuh;
+    //-- calculate mcu info
+
+    //++ allocate buffers for output
+    memset(out, 0, sizeof(BYTE*) * 4);
+    for (c=0; c<jfif->comp_num; c++) {
+        out[c] = malloc((jw * jfif->comp_info[c].samp_factor_h / sfh_max) * (jh * jfif->comp_info[c].samp_factor_v / sfv_max));
+    }
+    //-- allocate buffers for output
+
+    // open bit stream
+    bs = bitstr_open(BITSTR_MEM, (char*)jfif->databuf, (char*)jfif->datalen);
+    if (!bs) {
+        printf("failed to open bitstr for jfif_decode !");
+        return -1;
+    }
+
+    // init huffman codec
+    for (i=0; i<16; i++) {
+        if (jfif->phcac[i]) {
+            jfif->phcac[i]->input = bs;
+            huffman_decode_init(jfif->phcac[i]);
+        }
+        if (jfif->phcdc[i]) {
+            jfif->phcdc[i]->input = bs;
+            huffman_decode_init(jfif->phcdc[i]);
+        }
+    }
+
+    for (mcui=0; mcui<mcuc*mcur; mcui++) {
+        for (c=0; c<jfif->comp_num; c++) {
+            for (v=0; v<jfif->comp_info[c].samp_factor_v; v++) {
+                for (h=0; h<jfif->comp_info[c].samp_factor_h; h++) {
+                    HUFCODEC *hcac = jfif->phcac[jfif->comp_info[c].htab_idx_ac];
+                    HUFCODEC *hcdc = jfif->phcdc[jfif->comp_info[c].htab_idx_dc];
+                    int size, znum, code;
+                    int idct[64] = {0};
+                    int du  [64] = {0};
+
+                    //+ decode dc
+                    size = huffman_decode_step(hcdc) & 0xf;
+                    if (size) {
+                        code = bitstr_get_bits(bs, size);
+                        category_decode(&size, &code);
+                    }
+                    else {
+                        code = 0;
+                    }
+                    dc[c] += code;
+                    du[0]  = dc[c];
+                    //- decode dc
+
+                    //+ decode ac
+                    for (i=1; i<64; ) {
+                        code = huffman_decode_step(hcac);
+                        if (code <= 0) break;
+                        size = (code >> 0) & 0xf;
+                        znum = (code >> 4) & 0xf;
+                        i   += znum;
+                        code = bitstr_get_bits(bs, size);
+                        category_decode(&size, &code);
+                        if (i < 64) du[i++] = code;
+                    }
+                    //- decode ac
+
+                    // de-quantize
+                    quantize_decode(du, jfif->pqtab[jfif->comp_info[c].qtab_idx]);
+
+                    // de-zigzag
+                    zigzag_decode(du);
+
+                    // idct
+                    idct2d8x8(idct, du);
+
+#if TEST_JFIF
+                    // dump du
+//                  dump_du(idct);
+#endif
+                }
+            }
+        }
+    }
+
+    // close huffman codec
+    for (i=0; i<16; i++) {
+        if (jfif->phcac[i]) huffman_decode_done(jfif->phcac[i]);
+        if (jfif->phcdc[i]) huffman_decode_done(jfif->phcdc[i]);
+    }
+
+    // close bit stream
+    bitstr_close(bs);
+    return 0;
+}
+
 #if TEST_JFIF
 int main(int argc, char *argv[])
 {
-    void *jfif = NULL;
+    void *jfif   = NULL;
+    BYTE *out[4] = {0};
+    int   i;
 
     if (argc < 2) {
         printf(
@@ -346,9 +517,14 @@ int main(int argc, char *argv[])
     }
 
     jfif = jfif_load(argv[1]);
-    jfif_dump(jfif);
-    jfif_save(jfif, "save.jpg");
-    jfif_free(jfif);
+    jfif_decode(jfif, out);
+    jfif_dump  (jfif);
+    jfif_save  (jfif, "save.jpg");
+    jfif_free  (jfif);
+
+    for (i=0; i<4; i++) {
+        if (out[i]) free(out[i]);
+    }
 
     return 0;
 }
