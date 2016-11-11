@@ -17,18 +17,14 @@ static int zigzag[64] =
 /* º¯ÊıÊµÏÖ */
 void zigzag_encode(int *data)
 {
-    int buf[64];
-    int i;
-
+    int buf[64], i;
     for (i=0; i<64; i++) buf [i] = data[zigzag[i]];
     for (i=0; i<64; i++) data[i] = buf[i];
 }
 
 void zigzag_decode(int *data)
 {
-    int buf[64];
-    int i;
-
+    int buf[64], i;
     for (i=0; i<64; i++) buf [zigzag[i]] = data[i];
     for (i=0; i<64; i++) data[i] = buf[i];
 }
