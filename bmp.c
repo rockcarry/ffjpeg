@@ -48,7 +48,7 @@ int bmp_load(BMP *pb, char *file)
 
     fread(&header, sizeof(header), 1, fp);
     pb->width  = header.biWidth;
-    pb->height = header.biHeight > 0 ? header.biHeight : -header.biHeight;
+    pb->height = header.biHeight;
     pb->pdata  = malloc(ALIGN(pb->width * 3, 4) * pb->height);
     if (pb->pdata) {
         stride = ALIGN(pb->width * 3, 4);

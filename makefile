@@ -13,6 +13,7 @@ OBJS = \
     zigzag.o  \
     bitstr.o  \
     huffman.o \
+    bmp.o     \
     jfif.o
 
 # 所有的可执行目标
