@@ -23,7 +23,7 @@ void init_fdct_ftab(int *ftab, int *qtab)
     if (!ftab || !qtab) return;
     memcpy(ftab, qtab, sizeof(int) * 64);
     zigzag_decode(ftab);
-    for (i=0; i<64; i++) ftab[i] /= FDCT_FACTOR_TAB[i];
+    for (i=0; i<64; i++) ftab[i] = FDCT_FACTOR_TAB[i] / ftab[i];
 }
 
 void init_idct_ftab(int *ftab, int *qtab)
@@ -32,7 +32,7 @@ void init_idct_ftab(int *ftab, int *qtab)
     if (!ftab || !qtab) return;
     memcpy(ftab, qtab, sizeof(int) * 64);
     zigzag_decode(ftab);
-    for (i=0; i<64; i++) ftab[i] *= IDCT_FACTOR_TAB[i];
+    for (i=0; i<64; i++) ftab[i] = IDCT_FACTOR_TAB[i] * ftab[i];
 }
 
 
