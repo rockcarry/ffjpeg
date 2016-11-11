@@ -9,8 +9,8 @@ extern "C" {
 #endif
 
 /* º¯ÊıÉùÃ÷ */
-void quantize_encode(int *data, int *qtab);
-void quantize_decode(int *data, int *qtab);
+void init_fdct_ftab(int *ftab, int *qtab);
+void init_idct_ftab(int *ftab, int *qtab);
 
 #ifdef __cplusplus
 }

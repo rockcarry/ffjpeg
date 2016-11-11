@@ -23,6 +23,7 @@ typedef struct {
 
     // quantization table
     int      *pqtab[16];
+    int      *pftab[16];
 
     // huffman codec ac
     HUFCODEC *phcac[16];
@@ -415,6 +416,14 @@ int jfif_decode(void *ctxt, BMP *pb)
         return -1;
     }
 
+    // init ftab for dct
+    for (i=0; i<16; i++) {
+        if (jfif->pqtab[i]) {
+            jfif->pftab[i] = malloc(64 * sizeof(int));
+            init_idct_ftab(jfif->pftab[i], jfif->pqtab[i]);
+        }
+    }
+
     // init huffman codec
     for (i=0; i<16; i++) {
         if (jfif->phcac[i]) {
@@ -434,8 +443,7 @@ int jfif_decode(void *ctxt, BMP *pb)
                     HUFCODEC *hcac = jfif->phcac[jfif->comp_info[c].htab_idx_ac];
                     HUFCODEC *hcdc = jfif->phcdc[jfif->comp_info[c].htab_idx_dc];
                     int size, znum, code;
-                    int idct[64] = {0};
-                    int du  [64] = {0};
+                    int du[64] = {0};
 
                     //+ decode dc
                     size = huffman_decode_step(hcdc) & 0xf;
@@ -463,14 +471,11 @@ int jfif_decode(void *ctxt, BMP *pb)
                     }
                     //- decode ac
 
-                    // de-quantize
-                    quantize_decode(du, jfif->pqtab[jfif->comp_info[c].qtab_idx]);
-
                     // de-zigzag
                     zigzag_decode(du);
 
                     // idct
-                    idct2d8x8(idct, du);
+                    idct2d8x8(du, jfif->pftab[jfif->comp_info[c].qtab_idx]);
 
 #if TEST_JFIF
 //                  dump_du(idct);
@@ -487,6 +492,14 @@ int jfif_decode(void *ctxt, BMP *pb)
     for (i=0; i<16; i++) {
         if (jfif->phcac[i]) huffman_decode_done(jfif->phcac[i]);
         if (jfif->phcdc[i]) huffman_decode_done(jfif->phcdc[i]);
+    }
+
+    // free ftab
+    for (i=0; i<16; i++) {
+        if (jfif->pftab[i]) {
+            free(jfif->pftab[i]);
+            jfif->pftab[i] = NULL;
+        }
     }
 
     // close bit stream

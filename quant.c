@@ -1,4 +1,7 @@
 /* 包含头文件 */
+#include <string.h>
+#include "dct.h"
+#include "zigzag.h"
 #include "quant.h"
 
 /* 全局变量定义 */
@@ -14,16 +17,22 @@ int STD_QUANT_TAB[64] =
    121, 112, 100, 120,  92, 101, 103,  99 
 };
 
-void quantize_encode(int *data, int *qtab)
+void init_fdct_ftab(int *ftab, int *qtab)
 {
     int i;
-    for (i=0; i<64; i++) data[i] /= qtab[i];
+    if (!ftab || !qtab) return;
+    memcpy(ftab, qtab, sizeof(int) * 64);
+    zigzag_decode(ftab);
+    for (i=0; i<64; i++) ftab[i] /= FDCT_FACTOR_TAB[i];
 }
 
-void quantize_decode(int *data, int *qtab)
+void init_idct_ftab(int *ftab, int *qtab)
 {
     int i;
-    for (i=0; i<64; i++) data[i] *= qtab[i];
+    if (!ftab || !qtab) return;
+    memcpy(ftab, qtab, sizeof(int) * 64);
+    zigzag_decode(ftab);
+    for (i=0; i<64; i++) ftab[i] *= IDCT_FACTOR_TAB[i];
 }
 
 

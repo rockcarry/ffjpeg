@@ -4,10 +4,9 @@
 #if 1 /* 快速的整数运算版本 */
 /* 内部常量定义 */
 #define DCTSIZE  8
-#define OUTSIZE  8
 
 /* 内部全局变量定义 */
-static int enfactor[64] =
+int FDCT_FACTOR_TAB[64] =
 {
      65536,  47248,  50159,  55733,  65536,  83411, 121094, 237535,
      47248,  34064,  36162,  40181,  47248,  60136,  87304, 171253,
@@ -19,7 +18,7 @@ static int enfactor[64] =
     237535, 171253, 181802, 202007, 237535, 302325, 438909, 860951,
 };
 
-static int defactor[64] =
+int IDCT_FACTOR_TAB[64] =
 {
     65536,  90901,  85626,  77062,  65536,  51491,  35467,  18081,
     90901, 126083, 118767, 106888,  90901,  71420,  49195,  25079,
@@ -43,7 +42,7 @@ static int defactor[64] =
  */
 
 /* 函数实现 */
-void fdct2d8x8(int *out, int *data)
+void fdct2d8x8(int *data, int *ftab)
 {
     int tmp0,  tmp1,  tmp2,  tmp3;
     int tmp4,  tmp5,  tmp6,  tmp7;
@@ -51,8 +50,6 @@ void fdct2d8x8(int *out, int *data)
     int z1, z2, z3, z4, z5, z11, z13;
     int *dataptr;
     int ctr, i;
-
-    for (i=0; i<64; i++) data[i] <<= 1;
 
     /* Pass 1: process rows. */
     dataptr = data;
@@ -150,48 +147,46 @@ void fdct2d8x8(int *out, int *data)
         dataptr++;  /* advance pointer to next column */
     }
 
+    if (!ftab) ftab = FDCT_FACTOR_TAB;
     for (i=0; i<64; i++)
     {
-        data[i]  *= enfactor[i];
-        data[i] >>= 20;
+        data[i]  *= ftab[i];
+        data[i] >>= 19;
     }
 }
 
-void idct2d8x8(int *out, int *data)
+void idct2d8x8(int *data, int *ftab)
 {
-    int tmp0,  tmp1,  tmp2,  tmp3;
-    int tmp4,  tmp5,  tmp6,  tmp7;
-    int tmp10, tmp11, tmp12, tmp13;
-    int z5, z10, z11, z12, z13;
-    int *dataptr, *outptr;
-    int ctr, i;
+    int  tmp0,  tmp1,  tmp2,  tmp3;
+    int  tmp4,  tmp5,  tmp6,  tmp7;
+    int  tmp10, tmp11, tmp12, tmp13;
+    int  z5, z10, z11, z12, z13;
+    int *dataptr;
+    int  ctr, i;
 
-    /* 变换前先乘以变换系数 */
+    if (!ftab) ftab = IDCT_FACTOR_TAB;
     for (i=0; i<64; i++)
     {
-        data[i]  *= defactor[i];
+        data[i]  *= ftab[i];
         data[i] >>= 13;
     }
 
     /* Pass 1: process rows. */
     dataptr = data;
-    outptr  = out;
     for (ctr=0; ctr<DCTSIZE; ctr++)
     {
         if ( dataptr[1] + dataptr[2] + dataptr[3] + dataptr[4] +
              dataptr[5] + dataptr[6] + dataptr[7] == 0 )
         {
-            outptr[0] = dataptr[0];
-            outptr[1] = dataptr[0];
-            outptr[2] = dataptr[0];
-            outptr[3] = dataptr[0];
-            outptr[4] = dataptr[0];
-            outptr[5] = dataptr[0];
-            outptr[6] = dataptr[0];
-            outptr[7] = dataptr[0];
+            dataptr[1] = dataptr[0];
+            dataptr[2] = dataptr[0];
+            dataptr[3] = dataptr[0];
+            dataptr[4] = dataptr[0];
+            dataptr[5] = dataptr[0];
+            dataptr[6] = dataptr[0];
+            dataptr[7] = dataptr[0];
 
             dataptr += DCTSIZE;
-            outptr  += OUTSIZE;
             continue;
         }
 
@@ -239,28 +234,27 @@ void idct2d8x8(int *out, int *data)
         tmp5 = tmp11 - tmp6;
         tmp4 = tmp10 + tmp5;
 
-        outptr[0] = tmp0 + tmp7;
-        outptr[7] = tmp0 - tmp7;
-        outptr[1] = tmp1 + tmp6;
-        outptr[6] = tmp1 - tmp6;
-        outptr[2] = tmp2 + tmp5;
-        outptr[5] = tmp2 - tmp5;
-        outptr[4] = tmp3 + tmp4;
-        outptr[3] = tmp3 - tmp4;
+        dataptr[0] = tmp0 + tmp7;
+        dataptr[7] = tmp0 - tmp7;
+        dataptr[1] = tmp1 + tmp6;
+        dataptr[6] = tmp1 - tmp6;
+        dataptr[2] = tmp2 + tmp5;
+        dataptr[5] = tmp2 - tmp5;
+        dataptr[4] = tmp3 + tmp4;
+        dataptr[3] = tmp3 - tmp4;
 
         dataptr += DCTSIZE;
-        outptr  += OUTSIZE;
     }
 
     /* Pass 2: process columns. */
-    outptr = out;
+    dataptr = data;
     for (ctr=0; ctr<DCTSIZE; ctr++)
     {
         /* Even part */
-        tmp0 = outptr[OUTSIZE * 0];
-        tmp1 = outptr[OUTSIZE * 2];
-        tmp2 = outptr[OUTSIZE * 4];
-        tmp3 = outptr[OUTSIZE * 6];
+        tmp0 = dataptr[DCTSIZE * 0];
+        tmp1 = dataptr[DCTSIZE * 2];
+        tmp2 = dataptr[DCTSIZE * 4];
+        tmp3 = dataptr[DCTSIZE * 6];
 
         tmp10 = tmp0 + tmp2;    /* phase 3 */
         tmp11 = tmp0 - tmp2;
@@ -277,10 +271,10 @@ void idct2d8x8(int *out, int *data)
         tmp2 = tmp11 - tmp12;
     
         /* Odd part */
-        tmp4 = outptr[OUTSIZE * 1];
-        tmp5 = outptr[OUTSIZE * 3];
-        tmp6 = outptr[OUTSIZE * 5];
-        tmp7 = outptr[OUTSIZE * 7];
+        tmp4 = dataptr[DCTSIZE * 1];
+        tmp5 = dataptr[DCTSIZE * 3];
+        tmp6 = dataptr[DCTSIZE * 5];
+        tmp7 = dataptr[DCTSIZE * 7];
 
         z13 = tmp6 + tmp5;    /* phase 6 */
         z10 = tmp6 - tmp5;
@@ -300,16 +294,16 @@ void idct2d8x8(int *out, int *data)
         tmp5 = tmp11 - tmp6;
         tmp4 = tmp10 + tmp5;
 
-        outptr[OUTSIZE * 0] = (tmp0 + tmp7) >> 6;
-        outptr[OUTSIZE * 7] = (tmp0 - tmp7) >> 6;
-        outptr[OUTSIZE * 1] = (tmp1 + tmp6) >> 6;
-        outptr[OUTSIZE * 6] = (tmp1 - tmp6) >> 6;
-        outptr[OUTSIZE * 2] = (tmp2 + tmp5) >> 6;
-        outptr[OUTSIZE * 5] = (tmp2 - tmp5) >> 6;
-        outptr[OUTSIZE * 4] = (tmp3 + tmp4) >> 6;
-        outptr[OUTSIZE * 3] = (tmp3 - tmp4) >> 6;
+        dataptr[DCTSIZE * 0] = (tmp0 + tmp7) >> 6;
+        dataptr[DCTSIZE * 7] = (tmp0 - tmp7) >> 6;
+        dataptr[DCTSIZE * 1] = (tmp1 + tmp6) >> 6;
+        dataptr[DCTSIZE * 6] = (tmp1 - tmp6) >> 6;
+        dataptr[DCTSIZE * 2] = (tmp2 + tmp5) >> 6;
+        dataptr[DCTSIZE * 5] = (tmp2 - tmp5) >> 6;
+        dataptr[DCTSIZE * 4] = (tmp3 + tmp4) >> 6;
+        dataptr[DCTSIZE * 3] = (tmp3 - tmp4) >> 6;
 
-        outptr++; /* advance pointers to next column */
+        dataptr++; /* advance pointers to next column */
     }
 }
 #endif
