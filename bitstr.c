@@ -3,6 +3,9 @@
 #include "stdefine.h"
 #include "bitstr.h"
 
+// 预编译开关
+#define USE_JPEG_BITSTR  1
+
 //+++ memory bitstr +++//
 
 /* 内部类型定义 */
@@ -74,46 +77,6 @@ static long mbitstr_tell(void *stream)
     return context->curpos > context->memlen ? EOF : context->curpos;
 }
 
-static int mbitstr_getb(void *stream)
-{
-    int bit;
-    MBITSTR *context = (MBITSTR*)stream;
-    if (!context) return EOF;
-
-    if (context->bitnum == 0) {
-        context->bitbuf = mbitstr_getc(context);
-        context->bitnum = 8;
-        if (context->bitbuf == EOF) {
-            return EOF;
-        }
-    }
-
-    bit = (context->bitbuf >> 7) & (1 << 0);
-    context->bitbuf <<= 1;
-    context->bitnum--;
-    return bit;
-}
-
-static int mbitstr_putb(int b, void *stream)
-{
-    MBITSTR *context = (MBITSTR*)stream;
-    if (!context) return EOF;
-
-    context->bitbuf <<= 1;
-    context->bitbuf  |= b;
-    context->bitnum++;
-
-    if (context->bitnum == 8) {
-        if (EOF == mbitstr_putc(context->bitbuf & 0xff, context)) {
-            return EOF;
-        }
-        context->bitbuf = 0;
-        context->bitnum = 0;
-    }
-
-    return b;
-}
-
 static int mbitstr_flush(void *stream) { return stream ? 0 : EOF; }
 
 //--- memory bitstr ---//
@@ -182,46 +145,6 @@ static long fbitstr_tell(void *stream)
     FBITSTR *context = (FBITSTR*)stream;
     if (!context || !context->fp) return EOF;
     return ftell(context->fp);
-}
-
-static int fbitstr_getb(void *stream)
-{
-    int bit;
-    FBITSTR *context = (FBITSTR*)stream;
-    if (!context || !context->fp) return EOF;
-
-    if (context->bitnum == 0) {
-        context->bitbuf = fgetc(context->fp);
-        context->bitnum = 8;
-        if (context->bitbuf == EOF) {
-            return EOF;
-        }
-    }
-
-    bit = (context->bitbuf >> 7) & (1 << 0);
-    context->bitbuf <<= 1;
-    context->bitnum--;
-    return bit;
-}
-
-static int fbitstr_putb(int b, void *stream)
-{
-    FBITSTR *context = (FBITSTR*)stream;
-    if (!context || !context->fp) return EOF;
-
-    context->bitbuf <<= 1;
-    context->bitbuf  |= b;
-    context->bitnum++;
-
-    if (context->bitnum == 8) {
-        if (EOF == fputc(context->bitbuf & 0xff, context->fp)) {
-            return EOF;
-        }
-        context->bitbuf = 0;
-        context->bitnum = 0;
-    }
-
-    return b;
 }
 
 static int fbitstr_flush(void *stream)
@@ -305,22 +228,56 @@ long bitstr_tell(void *stream)
 
 int bitstr_getb(void *stream)
 {
-    int type = *(int*)stream;
-    switch (type) {
-    case BITSTR_MEM : return mbitstr_getb(stream);
-    case BITSTR_FILE: return fbitstr_getb(stream);
+    int bit, flag = 0;
+    FBITSTR *context = (FBITSTR*)stream;
+    if (!context) return EOF;
+
+    if (context->bitnum == 0) {
+#if USE_JPEG_BITSTR
+        do {
+            context->bitbuf = bitstr_getc(stream);
+            if (context->bitbuf == 0xff) flag = 1;
+        } while (context->bitbuf != EOF && context->bitbuf == 0xff);
+        if (flag && context->bitbuf == 0) context->bitbuf = 0xff;
+#else
+        context->bitbuf = bitstr_getc(stream);
+#endif
+        context->bitnum = 8;
+        if (context->bitbuf == EOF) {
+            return EOF;
+        }
     }
-    return EOF;
+
+    bit = (context->bitbuf >> 7) & (1 << 0);
+    context->bitbuf <<= 1;
+    context->bitnum--;
+    return bit;
 }
 
 int bitstr_putb(int b, void *stream)
 {
-    int type = *(int*)stream;
-    switch (type) {
-    case BITSTR_MEM : return mbitstr_putb(b, stream);
-    case BITSTR_FILE: return fbitstr_putb(b, stream);
+    FBITSTR *context = (FBITSTR*)stream;
+    if (!context) return EOF;
+
+    context->bitbuf <<= 1;
+    context->bitbuf  |= b;
+    context->bitnum++;
+
+    if (context->bitnum == 8) {
+        if (EOF == bitstr_putc(context->bitbuf & 0xff, stream)) {
+            return EOF;
+        }
+
+#if USE_JPEG_BITSTR
+        if (context->bitbuf == 0xff) {
+            if (EOF == bitstr_putc(0x00, stream)) return EOF;
+        }
+#endif
+        context->bitbuf = 0;
+        context->bitnum = 0;
     }
-    return EOF;
+
+    return b;
 }
 
 int bitstr_flush(void *stream)
