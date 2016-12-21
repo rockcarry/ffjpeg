@@ -14,8 +14,8 @@ correct code by your self, to decode and display a jpeg file on the screen. it's
 challenging.
 
 maybe some one will say, there is no need to reinvent wheel. but i say, if you don't write code,
-you will never really know how it work, and how to optimize it. the jpeg standard is the most
-important standard, and also the foundation, of image and video compression. if you want to
+you will never really know how it works, and how to optimize it. the jpeg standard is the most
+important standard, and also the foundation of image and video compression. if you want to
 study more about video compression, you should write a correct jpeg encoding/decoding code by
 you self first.
 
