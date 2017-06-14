@@ -22,7 +22,6 @@ int main(int argc, char *argv[])
 
     jfif = jfif_load(argv[1]);
     jfif_decode(jfif, &bmp);
-    jfif_save  (jfif, "save.jpg");
     jfif_free  (jfif);
 
     bmp_save(&bmp, "decode.bmp");
