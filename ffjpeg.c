@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
             "jfif test program\n"
             "usage: jfif filename\n"
         );
+        return 0;
     }
 
     // init color convert
