@@ -13,7 +13,7 @@
 #include "jfif.h"
 
 // 预编译开关
-#define TEST_JFIF  1
+#define DEBUG_JFIF  0
 
 // 内部类型定义
 typedef struct {
@@ -47,7 +47,7 @@ typedef struct {
 } JFIF;
 
 /* 内部函数实现 */
-#if TEST_JFIF
+#if DEBUG_JFIF
 static void jfif_dump(JFIF *jfif)
 {
     int i, j;
@@ -136,6 +136,7 @@ static int bitstr_get_bits(void *stream, int n)
 static int category_encode(int code, int *size)
 {
     // todo...
+    return 0;
 }
 
 static int category_decode(int code, int  size)
@@ -378,11 +379,18 @@ int jfif_decode(void *ctxt, BMP *pb)
 {
     JFIF *jfif = (JFIF*)ctxt;
     void *bs   = NULL;
-    int   i, c, h, v;
     int   dc[4]= {0};
     int   mcuw, mcuh, mcuc, mcur, mcui, jw, jh;
+    int   i, j, c, h, v, x, y;
     int   sfh_max = 0;
     int   sfv_max = 0;
+    int   yuv_stride[3] = {0};
+    int   yuv_height[3] = {0};
+    int  *yuv_datbuf[3] = {0};
+    int  *idst, *isrc;
+    int  *ysrc, *usrc, *vsrc;
+    BYTE *bdst;
+    int   ret = -1;
 
     if (!ctxt || !pb) {
         printf("invalid input params !\n");
@@ -406,8 +414,19 @@ int jfif_decode(void *ctxt, BMP *pb)
     mcur = jh / mcuh;
     //-- calculate mcu info
 
-    // create bmp for decoding
-    bmp_create(pb, jfif->width, jfif->height);
+    // create yuv buffer for decoding
+    yuv_stride[0] = jw;
+    yuv_stride[1] = jw * jfif->comp_info[1].samp_factor_h / sfh_max;
+    yuv_stride[2] = jw * jfif->comp_info[2].samp_factor_h / sfh_max;
+    yuv_height[0] = jh;
+    yuv_height[1] = jh * jfif->comp_info[1].samp_factor_v / sfv_max;
+    yuv_height[2] = jh * jfif->comp_info[2].samp_factor_v / sfv_max;
+    yuv_datbuf[0] = malloc(yuv_stride[0] * yuv_height[0] * sizeof(int));
+    yuv_datbuf[1] = malloc(yuv_stride[1] * yuv_height[1] * sizeof(int));
+    yuv_datbuf[2] = malloc(yuv_stride[2] * yuv_height[2] * sizeof(int));
+    if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2]) {
+        goto done;
+    }
 
     // open bit stream
     bs = bitstr_open(BITSTR_MEM, (char*)jfif->databuf, (char*)jfif->datalen);
@@ -477,12 +496,20 @@ int jfif_decode(void *ctxt, BMP *pb)
                     // idct
                     idct2d8x8(du, jfif->pftab[jfif->comp_info[c].qtab_idx]);
 
-#if TEST_JFIF
-//                  dump_du(idct);
+#if DEBUG_JFIF
+                    dump_du(du);
 #endif
 
-                    // copy to output buffer
-                    // todo...
+                    // copy du to yuv buffer
+                    x    = ((mcui % mcuc) * mcuw + h * 8) * jfif->comp_info[c].samp_factor_h / sfh_max;
+                    y    = ((mcui / mcuc) * mcuh + v * 8) * jfif->comp_info[c].samp_factor_v / sfv_max;
+                    idst = yuv_datbuf[c] + y * yuv_stride[c] + x;
+                    isrc = du;
+                    for (i=0; i<8; i++) {
+                        memcpy(idst, isrc, 8 * sizeof(int));
+                        idst += yuv_stride[c];
+                        isrc += 8;
+                    }
                 }
             }
         }
@@ -504,7 +531,37 @@ int jfif_decode(void *ctxt, BMP *pb)
 
     // close bit stream
     bitstr_close(bs);
-    return 0;
+
+    // create bitmap, and convert yuv to rgb
+    bmp_create(pb, jfif->width, jfif->height);
+    bdst = (BYTE*)pb->pdata;
+    ysrc = yuv_datbuf[0];
+    for (i=0; i<jfif->height; i++) {
+        int uy = i * jfif->comp_info[1].samp_factor_v / sfv_max;
+        int vy = i * jfif->comp_info[2].samp_factor_v / sfv_max;
+        for (j=0; j<jfif->width; j++) {
+            int ux = j * jfif->comp_info[1].samp_factor_h / sfh_max;
+            int vx = j * jfif->comp_info[2].samp_factor_h / sfh_max;
+            usrc = yuv_datbuf[1] + uy * yuv_stride[1] + ux;
+            vsrc = yuv_datbuf[2] + vy * yuv_stride[2] + vx;
+            yuv_to_rgb(*ysrc + 128, *vsrc + 128, *usrc + 128, bdst + 0, bdst + 1, bdst + 2);
+            bdst += 3;
+            ysrc += 1;
+        }
+        bdst -= jfif->width * 3;
+        bdst += pb->stride;
+        ysrc -= jfif->width * 1;
+        ysrc += yuv_stride[0];
+    }
+
+    // success
+    ret = 0;
+
+done:
+    if (yuv_datbuf[0]) free(yuv_datbuf[0]);
+    if (yuv_datbuf[1]) free(yuv_datbuf[1]);
+    if (yuv_datbuf[2]) free(yuv_datbuf[2]);
+    return ret;
 }
 
 int jfif_encode(void *ctxt, BMP *pb)
@@ -513,31 +570,7 @@ int jfif_encode(void *ctxt, BMP *pb)
     return -1;
 }
 
-#if TEST_JFIF
-int main(int argc, char *argv[])
-{
-    void *jfif = NULL;
-    BMP   bmp  = {0};
 
-    if (argc < 2) {
-        printf(
-            "jfif test program\n"
-            "usage: jfif filename\n"
-        );
-    }
-
-    jfif = jfif_load(argv[1]);
-    jfif_decode(jfif, &bmp);
-    jfif_dump  (jfif);
-    jfif_save  (jfif, "save.jpg");
-    jfif_free  (jfif);
-
-    bmp_save(&bmp, "decode.bmp");
-    bmp_free(&bmp);
-
-    return 0;
-}
-#endif
 
 
 
