@@ -39,7 +39,6 @@ int bmp_load(BMP *pb, char *file)
 {
     BMPFILEHEADER header = {0};
     FILE         *fp     = NULL;
-    int           stride =  0;
     BYTE         *pdata  = NULL;
     int           i;
 
@@ -49,13 +48,13 @@ int bmp_load(BMP *pb, char *file)
     fread(&header, sizeof(header), 1, fp);
     pb->width  = header.biWidth;
     pb->height = header.biHeight;
-    pb->pdata  = malloc(ALIGN(pb->width * 3, 4) * pb->height);
+    pb->stride = ALIGN(header.biWidth * 3, 4);
+    pb->pdata  = malloc(pb->stride * pb->height);
     if (pb->pdata) {
-        stride = ALIGN(pb->width * 3, 4);
-        pdata  = (BYTE*)pb->pdata + stride * pb->height;
+        pdata  = (BYTE*)pb->pdata + pb->stride * pb->height;
         for (i=0; i<pb->height; i++) {
-            pdata -= stride;
-            fread(pdata, stride, 1, fp);
+            pdata -= pb->stride;
+            fread(pdata, pb->stride, 1, fp);
         }
     }
 
@@ -67,7 +66,8 @@ int bmp_create(BMP *pb, int w, int h)
 {
     pb->width  = w;
     pb->height = h;
-    pb->pdata  = malloc(ALIGN(w * 3, 4) * h);
+    pb->stride = ALIGN(w * 3, 4);
+    pb->pdata  = malloc(pb->stride * h);
     return pb->pdata ? 0 : -1;
 }
 
@@ -75,26 +75,25 @@ int bmp_save(BMP *pb, char *file)
 {
     BMPFILEHEADER header = {0};
     FILE         *fp     = NULL;
-    int           stride = ALIGN(pb->width * 3, 4);
     BYTE         *pdata;
     int           i;
 
     header.bfType     = ('B' << 0) | ('M' << 8);
-    header.bfSize     = sizeof(header) + stride * pb->height;
+    header.bfSize     = sizeof(header) + pb->stride * pb->height;
     header.bfOffBits  = sizeof(header);
     header.biSize     = 40;
     header.biWidth    = pb->width;
     header.biHeight   = pb->height;
     header.biBitCount = 24;
-    header.biSizeImage= stride * pb->height;
+    header.biSizeImage= pb->stride * pb->height;
 
     fp = fopen(file, "wb");
     if (fp) {
         fwrite(&header, sizeof(header), 1, fp);
-        pdata = (BYTE*)pb->pdata + stride * pb->height;
+        pdata = (BYTE*)pb->pdata + pb->stride * pb->height;
         for (i=0; i<pb->height; i++) {
-            pdata -= stride;
-            fwrite(pdata, stride, 1, fp);
+            pdata -= pb->stride;
+            fwrite(pdata, pb->stride, 1, fp);
         }
         fclose(fp);
     }
@@ -108,7 +107,9 @@ void bmp_free(BMP *pb)
         free(pb->pdata);
         pb->pdata = NULL;
     }
-    pb->width = pb->height = 0;
+    pb->width  = 0;
+    pb->height = 0;
+    pb->stride = 0;
 }
 
 

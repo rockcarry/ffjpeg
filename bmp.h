@@ -11,6 +11,7 @@ typedef struct
 {
     int   width;   /* 宽度 */
     int   height;  /* 高度 */
+    int   stride;  /* 行字节数 */
     void *pdata;   /* 指向数据 */
 } BMP;
 
