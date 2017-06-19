@@ -222,6 +222,7 @@ void* jfif_load(char *file)
                         jfif->pqtab[idx][i] = buf[1 + i];
                     }
                 }
+                zigzag_decode(jfif->pqtab[idx]);
             }
             break;
 

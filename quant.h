@@ -2,7 +2,8 @@
 #define __FFJPEG_QUANT_H__
 
 /* 全局变量声明 */
-extern int STD_QUANT_TAB[64];
+extern int STD_QUANT_TAB_Y[64];
+extern int STD_QUANT_TAB_U[64];
 
 #ifdef __cplusplus
 extern "C" {
