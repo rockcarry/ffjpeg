@@ -565,10 +565,74 @@ done:
     return ret;
 }
 
-int jfif_encode(void *ctxt, BMP *pb)
+void* jfif_encode(BMP *pb)
 {
-    // todo...
-    return -1;
+    JFIF *jfif = NULL;
+    int   jw, jh;
+    int  *yuv_datbuf[3] = {0};
+    int  *ydst, *udst, *vdst;
+    int  *isrc, *idst;
+    BYTE *bsrc;
+    int   i, j, m, n;
+
+    if (!pb) {
+        printf("invalid input params !\n");
+        return NULL;
+    }
+
+    jw = ALIGN(pb->width , 16);
+    jh = ALIGN(pb->height, 16);
+
+    yuv_datbuf[0] = malloc(jw * jh / 1 * sizeof(int));
+    yuv_datbuf[1] = malloc(jw * jh / 4 * sizeof(int));
+    yuv_datbuf[2] = malloc(jw * jh / 4 * sizeof(int));
+    if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2]) {
+        goto done;
+    }
+
+    // convert rgb to yuv
+    bsrc = pb->pdata;
+    ydst = yuv_datbuf[0];
+    udst = yuv_datbuf[1];
+    vdst = yuv_datbuf[2];
+    for (i=0; i<pb->height; i++) {
+        for (j=0; j<pb->width; j++) {
+            rgb_to_yuv(bsrc[0], bsrc[1], bsrc[2], ydst, udst, vdst);
+            bsrc += 3;
+            ydst += 1;
+            if ((j & 1) == 0) {
+                udst += 1;
+                vdst += 1;
+            }
+        }
+        bsrc -= pb->width * 3; bsrc += pb->stride;
+        ydst -= pb->width * 1; ydst += jw;
+        if ((i & 1) == 0) {
+            udst -= pb->width / 2; udst += jw / 2;
+            vdst -= pb->width / 2; vdst += jw / 2;
+        }
+    }
+
+    for (m=0; m<jh/16; m++) {
+        for (n=0; n<jw/16; n++) {
+            int du[64];
+            isrc = yuv_datbuf[0] + m * 16 * jw + n * 16;
+            idst = du;
+            for (i=0; i<8; i++) {
+                memcpy(idst, isrc, 8);
+                isrc += jw;
+                idst += 8;
+            }
+            fdct2d8x8(du, STD_QUANT_TAB_Y);
+            zigzag_encode(du);
+        }
+    }
+
+done:
+    if (yuv_datbuf[0]) free(yuv_datbuf[0]);
+    if (yuv_datbuf[1]) free(yuv_datbuf[1]);
+    if (yuv_datbuf[2]) free(yuv_datbuf[2]);
+    return jfif;
 }
 
 
