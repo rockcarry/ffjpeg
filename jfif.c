@@ -568,21 +568,91 @@ done:
 void* jfif_encode(BMP *pb)
 {
     JFIF *jfif = NULL;
+    void *bs   = NULL;
     int   jw, jh;
     int  *yuv_datbuf[3] = {0};
     int  *ydst, *udst, *vdst;
     int  *isrc, *idst;
     BYTE *bsrc;
     int   i, j, m, n;
+    int   failed = 1;
 
+    // check input params
     if (!pb) {
         printf("invalid input params !\n");
         return NULL;
     }
 
+    // allocate jfif context
+    jfif = calloc(1, sizeof(JFIF));
+    if (!jfif) return NULL;
+
+    // init jfif context
+    jfif->width    = pb->width;
+    jfif->height   = pb->height;
+    jfif->pqtab[0] = malloc(64*sizeof(int));
+    jfif->pqtab[1] = malloc(64*sizeof(int));
+    jfif->pftab[0] = malloc(64*sizeof(int));
+    jfif->pftab[1] = malloc(64*sizeof(int));
+    jfif->phcac[0] = malloc(sizeof(HUFCODEC));
+    jfif->phcac[1] = malloc(sizeof(HUFCODEC));
+    jfif->phcdc[0] = malloc(sizeof(HUFCODEC));
+    jfif->phcdc[1] = malloc(sizeof(HUFCODEC));
+    jfif->datalen  = jfif->width * jfif->height * 2;
+    jfif->databuf  = malloc(jfif->datalen);
+    if (  !jfif->pqtab[0] || !jfif->pqtab[1] || !jfif->pftab[0] || !jfif->pftab[1]
+       || !jfif->phcac[0] || !jfif->phcac[1] || !jfif->phcdc[0] || !jfif->phcdc[1]
+       || !jfif->databuf ) {
+        goto done;
+    }
+
+    // init qtab & ftab
+    memcpy(jfif->pqtab[0], STD_QUANT_TAB_LUMIN, 64*sizeof(int));
+    memcpy(jfif->pqtab[1], STD_QUANT_TAB_CHROM, 64*sizeof(int));
+    init_fdct_ftab(jfif->pftab[0], jfif->pqtab[0]);
+    init_fdct_ftab(jfif->pftab[1], jfif->pqtab[1]);
+
+    // open bit stream
+    bs = bitstr_open(BITSTR_MEM, (char*)jfif->databuf, (char*)jfif->datalen);
+    if (!bs) {
+        printf("failed to open bitstr for jfif_decode !");
+        goto done;
+    }
+
+    // init huffman codec
+    memcpy(jfif->phcac[0]->huftab, STD_HUFTAB_LUMIN_AC, MAX_HUFFMAN_CODE_LEN + 256);
+    memcpy(jfif->phcac[1]->huftab, STD_HUFTAB_LUMIN_DC, MAX_HUFFMAN_CODE_LEN + 256);
+    memcpy(jfif->phcdc[0]->huftab, STD_HUFTAB_CHROM_AC, MAX_HUFFMAN_CODE_LEN + 256);
+    memcpy(jfif->phcdc[1]->huftab, STD_HUFTAB_CHROM_DC, MAX_HUFFMAN_CODE_LEN + 256);
+    jfif->phcac[0]->output = bs; huffman_encode_init(jfif->phcac[0]);
+    jfif->phcac[1]->output = bs; huffman_encode_init(jfif->phcac[1]);
+    jfif->phcdc[0]->output = bs; huffman_encode_init(jfif->phcdc[0]);
+    jfif->phcdc[1]->output = bs; huffman_encode_init(jfif->phcdc[1]);
+
+    // init comp_num & comp_info
+    jfif->comp_num                   = 3;
+    jfif->comp_info[0].id            = 0;
+    jfif->comp_info[0].samp_factor_v = 2;
+    jfif->comp_info[0].samp_factor_h = 2;
+    jfif->comp_info[0].qtab_idx      = 0;
+    jfif->comp_info[0].htab_idx_ac   = 0;
+    jfif->comp_info[0].htab_idx_dc   = 0;
+    jfif->comp_info[0].id            = 1;
+    jfif->comp_info[0].samp_factor_v = 1;
+    jfif->comp_info[0].samp_factor_h = 1;
+    jfif->comp_info[0].qtab_idx      = 1;
+    jfif->comp_info[0].htab_idx_ac   = 1;
+    jfif->comp_info[0].htab_idx_dc   = 1;
+    jfif->comp_info[0].id            = 2;
+    jfif->comp_info[0].samp_factor_v = 1;
+    jfif->comp_info[0].samp_factor_h = 1;
+    jfif->comp_info[0].qtab_idx      = 1;
+    jfif->comp_info[0].htab_idx_ac   = 1;
+    jfif->comp_info[0].htab_idx_dc   = 1;
+
+    // init jw & jw, init yuv data buffer
     jw = ALIGN(pb->width , 16);
     jh = ALIGN(pb->height, 16);
-
     yuv_datbuf[0] = malloc(jw * jh / 1 * sizeof(int));
     yuv_datbuf[1] = malloc(jw * jh / 4 * sizeof(int));
     yuv_datbuf[2] = malloc(jw * jh / 4 * sizeof(int));
@@ -600,16 +670,18 @@ void* jfif_encode(BMP *pb)
             rgb_to_yuv(bsrc[0], bsrc[1], bsrc[2], ydst, udst, vdst);
             bsrc += 3;
             ydst += 1;
-            if ((j & 1) == 0) {
+            if (j & 1) {
                 udst += 1;
                 vdst += 1;
             }
         }
         bsrc -= pb->width * 3; bsrc += pb->stride;
         ydst -= pb->width * 1; ydst += jw;
-        if ((i & 1) == 0) {
-            udst -= pb->width / 2; udst += jw / 2;
-            vdst -= pb->width / 2; vdst += jw / 2;
+        udst -= pb->width / 2;
+        vdst -= pb->width / 2;
+        if (i & 1) {
+            udst += jw / 2;
+            vdst += jw / 2;
         }
     }
 
@@ -619,19 +691,41 @@ void* jfif_encode(BMP *pb)
             isrc = yuv_datbuf[0] + m * 16 * jw + n * 16;
             idst = du;
             for (i=0; i<8; i++) {
-                memcpy(idst, isrc, 8);
+                memcpy(idst, isrc, 8 * sizeof(int));
                 isrc += jw;
                 idst += 8;
             }
-            fdct2d8x8(du, STD_QUANT_TAB_Y);
+            fdct2d8x8(du, jfif->pftab[0]);
             zigzag_encode(du);
+#if DEBUG_JFIF
+            dump_du(du);
+#endif
         }
     }
+    failed = 0;
 
 done:
+    // free yuv data buffer
     if (yuv_datbuf[0]) free(yuv_datbuf[0]);
     if (yuv_datbuf[1]) free(yuv_datbuf[1]);
     if (yuv_datbuf[2]) free(yuv_datbuf[2]);
+
+    // close huffman codec
+    huffman_encode_done(jfif->phcac[0]);
+    huffman_encode_done(jfif->phcac[1]);
+    huffman_encode_done(jfif->phcdc[0]);
+    huffman_encode_done(jfif->phcdc[1]);
+
+    // close bit stream
+    bitstr_close(bs);
+
+    // if failed free context
+    if (failed) {
+        jfif_free(jfif);
+        jfif = NULL;
+    }
+
+    // return context
     return jfif;
 }
 
