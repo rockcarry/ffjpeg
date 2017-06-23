@@ -4,7 +4,17 @@
 /* 包含头文件 */
 #include "stdefine.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* 常量定义 */
 #define MAX_HUFFMAN_CODE_LEN  16
+
+extern const BYTE STD_HUFTAB_LUMIN_AC[];
+extern const BYTE STD_HUFTAB_LUMIN_DC[];
+extern const BYTE STD_HUFTAB_CHROM_AC[];
+extern const BYTE STD_HUFTAB_CHROM_DC[];
 
 /* 类型定义 */
 /* 编码表项类型定义 */
@@ -28,9 +38,6 @@ typedef struct
     void        *output;       /* output bit stream */
 } HUFCODEC;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* 函数声明 */
 /* 标准的符号频率统计器 */
@@ -68,6 +75,10 @@ BOOL huffman_encode_init(HUFCODEC *phc);
 void huffman_encode_done(HUFCODEC *phc);
 BOOL huffman_encode_run (HUFCODEC *phc);
 
+/* 一次只编码一个符号 */
+BOOL huffman_encode_step(HUFCODEC *phc, int symbol);
+
+
 /* 解码 */
 /*
   解码方法：
@@ -97,7 +108,7 @@ BOOL huffman_decode_init(HUFCODEC *phc);
 void huffman_decode_done(HUFCODEC *phc);
 BOOL huffman_decode_run (HUFCODEC *phc);
 
-/* 一次只解码出一个符号 */
+/* 一次只解码一个符号 */
 int  huffman_decode_step(HUFCODEC *phc);
 
 #ifdef __cplusplus
