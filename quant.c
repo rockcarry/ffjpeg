@@ -5,7 +5,7 @@
 #include "quant.h"
 
 /* 全局变量定义 */
-int STD_QUANT_TAB_Y[64] =
+const int STD_QUANT_TAB_LUMIN[64] =
 {
     16, 11, 10, 16, 24, 40, 51, 61,
     12, 12, 14, 19, 26, 58, 60, 55,
@@ -17,7 +17,7 @@ int STD_QUANT_TAB_Y[64] =
     72, 92, 95, 98, 112,100,103,99
 };
 
-int STD_QUANT_TAB_U[64] =
+const int STD_QUANT_TAB_CHROM[64] =
 {
     17, 18, 24, 47, 99, 99, 99, 99,
     18, 21, 26, 66, 99, 99, 99, 99,
