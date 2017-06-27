@@ -90,7 +90,7 @@ void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream)
 #endif
 }
 
-BOOL huffman_encode_init(HUFCODEC *phc)
+static void huffman_encode_init_from_codelist(HUFCODEC *phc)
 {
     HUFCODEITEM *codelist = phc->codelist;
     HUFCODEITEM  copylist[256];
@@ -219,8 +219,43 @@ BOOL huffman_encode_init(HUFCODEC *phc)
         codelist[templist[i].symbol].depth = templist[i].depth;
         codelist[templist[i].symbol].code  = templist[i].code ;
     }
+}
 
-    return TRUE;
+static void huffman_encode_init_from_huftab(HUFCODEC *phc)
+{
+    int  i, j, k;
+    int  symbol;
+    int  code;
+    BYTE hufsize[256];
+    int  hufcode[256];
+    int  tabsize;
+
+    k    = 0;
+    code = 0x00;
+    for (i=0; i<MAX_HUFFMAN_CODE_LEN; i++) {
+        for (j=0; j<phc->huftab[i]; j++) {
+            hufsize[k] = i + 1;
+            hufcode[k] = code;
+            code++; k++;
+        }
+        code <<= 1;
+    }
+    tabsize = k;
+
+    for (i=0; i<tabsize; i++) {
+        symbol = phc->huftab[MAX_HUFFMAN_CODE_LEN + i];
+        phc->codelist[symbol].depth = hufsize[i];
+        phc->codelist[symbol].code  = hufcode[i];
+    }
+}
+
+void huffman_encode_init(HUFCODEC *phc, int flag)
+{
+    if (flag) {
+        huffman_encode_init_from_huftab  (phc);
+    } else {
+        huffman_encode_init_from_codelist(phc);
+    }
 }
 
 void huffman_encode_done(HUFCODEC *phc)
@@ -280,7 +315,7 @@ BOOL huffman_encode_step(HUFCODEC *phc, int data)
     return TRUE;
 }
 
-BOOL huffman_decode_init(HUFCODEC *phc)
+void huffman_decode_init(HUFCODEC *phc)
 {
     int i;
 
@@ -307,9 +342,6 @@ BOOL huffman_decode_init(HUFCODEC *phc)
     }
     printf("\n\n");
 #endif
-
-    /* ·µ»Ø³É¹¦ */
-    return TRUE;
 }
 
 void huffman_decode_done(HUFCODEC *phc)
@@ -423,7 +455,7 @@ int main(void)
     huffman_stat_freq(hufencoder.codelist, hufencoder.input);
     bitstr_seek(hufencoder.input, SEEK_SET, 0);
 
-    huffman_encode_init(&hufencoder);
+    huffman_encode_init(&hufencoder, 0);
     huffman_encode_run (&hufencoder);
     huffman_encode_done(&hufencoder);
 

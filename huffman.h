@@ -71,7 +71,9 @@ void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream);
          huffman_encode_begin 以后，用户可以自己根
          据 codelist 完成编码操作
  */
-BOOL huffman_encode_init(HUFCODEC *phc);
+// flag == 0, init from code freq list
+// flag == 1, init from huffman table
+void huffman_encode_init(HUFCODEC *phc, int flag);
 void huffman_encode_done(HUFCODEC *phc);
 BOOL huffman_encode_run (HUFCODEC *phc);
 
@@ -104,7 +106,7 @@ BOOL huffman_encode_step(HUFCODEC *phc, int symbol);
          的哈夫曼解码操作，该函数每次调用只会从数
          据流中解码出一个符号
  */
-BOOL huffman_decode_init(HUFCODEC *phc);
+void huffman_decode_init(HUFCODEC *phc);
 void huffman_decode_done(HUFCODEC *phc);
 BOOL huffman_decode_run (HUFCODEC *phc);
 

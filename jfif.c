@@ -594,10 +594,10 @@ void* jfif_encode(BMP *pb)
     jfif->pqtab[1] = malloc(64*sizeof(int));
     jfif->pftab[0] = malloc(64*sizeof(int));
     jfif->pftab[1] = malloc(64*sizeof(int));
-    jfif->phcac[0] = malloc(sizeof(HUFCODEC));
-    jfif->phcac[1] = malloc(sizeof(HUFCODEC));
-    jfif->phcdc[0] = malloc(sizeof(HUFCODEC));
-    jfif->phcdc[1] = malloc(sizeof(HUFCODEC));
+    jfif->phcac[0] = calloc(1, sizeof(HUFCODEC));
+    jfif->phcac[1] = calloc(1, sizeof(HUFCODEC));
+    jfif->phcdc[0] = calloc(1, sizeof(HUFCODEC));
+    jfif->phcdc[1] = calloc(1, sizeof(HUFCODEC));
     jfif->datalen  = jfif->width * jfif->height * 2;
     jfif->databuf  = malloc(jfif->datalen);
     if (  !jfif->pqtab[0] || !jfif->pqtab[1] || !jfif->pftab[0] || !jfif->pftab[1]
@@ -624,10 +624,10 @@ void* jfif_encode(BMP *pb)
     memcpy(jfif->phcac[1]->huftab, STD_HUFTAB_LUMIN_DC, MAX_HUFFMAN_CODE_LEN + 256);
     memcpy(jfif->phcdc[0]->huftab, STD_HUFTAB_CHROM_AC, MAX_HUFFMAN_CODE_LEN + 256);
     memcpy(jfif->phcdc[1]->huftab, STD_HUFTAB_CHROM_DC, MAX_HUFFMAN_CODE_LEN + 256);
-    jfif->phcac[0]->output = bs; huffman_encode_init(jfif->phcac[0]);
-    jfif->phcac[1]->output = bs; huffman_encode_init(jfif->phcac[1]);
-    jfif->phcdc[0]->output = bs; huffman_encode_init(jfif->phcdc[0]);
-    jfif->phcdc[1]->output = bs; huffman_encode_init(jfif->phcdc[1]);
+    jfif->phcac[0]->output = bs; huffman_encode_init(jfif->phcac[0], 1);
+    jfif->phcac[1]->output = bs; huffman_encode_init(jfif->phcac[1], 1);
+    jfif->phcdc[0]->output = bs; huffman_encode_init(jfif->phcdc[0], 1);
+    jfif->phcdc[1]->output = bs; huffman_encode_init(jfif->phcdc[1], 1);
 
     // init comp_num & comp_info
     jfif->comp_num                   = 3;
