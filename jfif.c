@@ -133,10 +133,27 @@ static int bitstr_get_bits(void *stream, int n)
     return buf;
 }
 
-static int category_encode(int code, int *size)
+static int bitstr_put_bits(void *stream, int bits, int n)
 {
-    // todo...
-    return 0;
+    unsigned buf = bits << (32 - n);
+    while (n--) {
+        if (EOF == bitstr_putb(buf >> 31, stream)) {
+            return EOF;
+        }
+        buf <<= 1;
+    }
+    return bits;
+}
+
+static void category_encode(int *code, int *size)
+{
+    unsigned absc = abs(*code);
+    unsigned mask = (1 << 15);
+    int i    = 15;
+    if (absc == 0) { *size = 0; return; }
+    while (i && !(absc & mask)) { mask >>= 1; i--; }
+    *size = i + 1;
+    if (*code < 0) *code = (1 << *size) - absc - 1;
 }
 
 static int category_decode(int code, int  size)
@@ -214,15 +231,14 @@ void* jfif_load(char *file)
                 if (!jfif->pqtab[idx]) break;
                 if (f16) { // 16bit
                     for (i=0; i<64; i++) {
-                        jfif->pqtab[idx][i] = (buf[1 + i * 2] << 8) | (buf[2 + i * 2] << 0);
+                        jfif->pqtab[idx][ZIGZAG[i]] = (buf[1 + i * 2] << 8) | (buf[2 + i * 2] << 0);
                     }
                 }
                 else { // 8bit
                     for (i=0; i<64; i++) {
-                        jfif->pqtab[idx][i] = buf[1 + i];
+                        jfif->pqtab[idx][ZIGZAG[i]] = buf[1 + i];
                     }
                 }
-                zigzag_decode(jfif->pqtab[idx]);
             }
             break;
 
@@ -288,7 +304,7 @@ int jfif_save(void *ctxt, char *file)
         fputc(len >> 0, fp);
         fputc(i   , fp);
         for (j=0; j<64; j++) {
-            fputc(jfif->pqtab[i][j], fp);
+            fputc(jfif->pqtab[i][ZIGZAG[j]], fp);
         }
     }
 
@@ -497,10 +513,6 @@ int jfif_decode(void *ctxt, BMP *pb)
                     // idct
                     idct2d8x8(du, jfif->pftab[jfif->comp_info[c].qtab_idx]);
 
-#if DEBUG_JFIF
-                    dump_du(du);
-#endif
-
                     // copy du to yuv buffer
                     x    = ((mcui % mcuc) * mcuw + h * 8) * jfif->comp_info[c].samp_factor_h / sfh_max;
                     y    = ((mcui / mcuc) * mcuh + v * 8) * jfif->comp_info[c].samp_factor_v / sfv_max;
@@ -545,7 +557,7 @@ int jfif_decode(void *ctxt, BMP *pb)
             int vx = j * jfif->comp_info[2].samp_factor_h / sfh_max;
             usrc = yuv_datbuf[1] + uy * yuv_stride[1] + ux;
             vsrc = yuv_datbuf[2] + vy * yuv_stride[2] + vx;
-            yuv_to_rgb(*ysrc + 128, *vsrc + 128, *usrc + 128, bdst + 0, bdst + 1, bdst + 2);
+            yuv_to_rgb(*ysrc, *vsrc, *usrc, bdst + 0, bdst + 1, bdst + 2);
             bdst += 3;
             ysrc += 1;
         }
@@ -565,6 +577,13 @@ done:
     return ret;
 }
 
+#define DU_TYPE_LUMIN  0
+#define DU_TYPE_CHROM  1
+static void jfif_encode_du(JFIF *jfif, int type, int du[64], int *dc)
+{
+    // todo...
+}
+
 void* jfif_encode(BMP *pb)
 {
     JFIF *jfif = NULL;
@@ -574,6 +593,8 @@ void* jfif_encode(BMP *pb)
     int  *ydst, *udst, *vdst;
     int  *isrc, *idst;
     BYTE *bsrc;
+    int   du[64]= {0};
+    int   dc[4 ]= {0};
     int   i, j, m, n;
     int   failed = 1;
 
@@ -621,8 +642,8 @@ void* jfif_encode(BMP *pb)
 
     // init huffman codec
     memcpy(jfif->phcac[0]->huftab, STD_HUFTAB_LUMIN_AC, MAX_HUFFMAN_CODE_LEN + 256);
-    memcpy(jfif->phcac[1]->huftab, STD_HUFTAB_LUMIN_DC, MAX_HUFFMAN_CODE_LEN + 256);
-    memcpy(jfif->phcdc[0]->huftab, STD_HUFTAB_CHROM_AC, MAX_HUFFMAN_CODE_LEN + 256);
+    memcpy(jfif->phcac[1]->huftab, STD_HUFTAB_CHROM_AC, MAX_HUFFMAN_CODE_LEN + 256);
+    memcpy(jfif->phcdc[0]->huftab, STD_HUFTAB_LUMIN_DC, MAX_HUFFMAN_CODE_LEN + 256);
     memcpy(jfif->phcdc[1]->huftab, STD_HUFTAB_CHROM_DC, MAX_HUFFMAN_CODE_LEN + 256);
     jfif->phcac[0]->output = bs; huffman_encode_init(jfif->phcac[0], 1);
     jfif->phcac[1]->output = bs; huffman_encode_init(jfif->phcac[1], 1);
@@ -631,24 +652,24 @@ void* jfif_encode(BMP *pb)
 
     // init comp_num & comp_info
     jfif->comp_num                   = 3;
-    jfif->comp_info[0].id            = 0;
+    jfif->comp_info[0].id            = 1;
     jfif->comp_info[0].samp_factor_v = 2;
     jfif->comp_info[0].samp_factor_h = 2;
     jfif->comp_info[0].qtab_idx      = 0;
     jfif->comp_info[0].htab_idx_ac   = 0;
     jfif->comp_info[0].htab_idx_dc   = 0;
-    jfif->comp_info[0].id            = 1;
-    jfif->comp_info[0].samp_factor_v = 1;
-    jfif->comp_info[0].samp_factor_h = 1;
-    jfif->comp_info[0].qtab_idx      = 1;
-    jfif->comp_info[0].htab_idx_ac   = 1;
-    jfif->comp_info[0].htab_idx_dc   = 1;
-    jfif->comp_info[0].id            = 2;
-    jfif->comp_info[0].samp_factor_v = 1;
-    jfif->comp_info[0].samp_factor_h = 1;
-    jfif->comp_info[0].qtab_idx      = 1;
-    jfif->comp_info[0].htab_idx_ac   = 1;
-    jfif->comp_info[0].htab_idx_dc   = 1;
+    jfif->comp_info[1].id            = 2;
+    jfif->comp_info[1].samp_factor_v = 1;
+    jfif->comp_info[1].samp_factor_h = 1;
+    jfif->comp_info[1].qtab_idx      = 1;
+    jfif->comp_info[1].htab_idx_ac   = 1;
+    jfif->comp_info[1].htab_idx_dc   = 1;
+    jfif->comp_info[2].id            = 3;
+    jfif->comp_info[2].samp_factor_v = 1;
+    jfif->comp_info[2].samp_factor_h = 1;
+    jfif->comp_info[2].qtab_idx      = 1;
+    jfif->comp_info[2].htab_idx_ac   = 1;
+    jfif->comp_info[2].htab_idx_dc   = 1;
 
     // init jw & jw, init yuv data buffer
     jw = ALIGN(pb->width , 16);
@@ -687,21 +708,72 @@ void* jfif_encode(BMP *pb)
 
     for (m=0; m<jh/16; m++) {
         for (n=0; n<jw/16; n++) {
-            int du[64];
-            isrc = yuv_datbuf[0] + m * 16 * jw + n * 16;
+            //++ encode mcu, yuv 4:2:0
+            //+ y du0
+            isrc = yuv_datbuf[0] + (m * 16 + 0) * jw + n * 16 + 0;
             idst = du;
             for (i=0; i<8; i++) {
                 memcpy(idst, isrc, 8 * sizeof(int));
-                isrc += jw;
-                idst += 8;
+                isrc += jw; idst += 8;
             }
-            fdct2d8x8(du, jfif->pftab[0]);
-            zigzag_encode(du);
-#if DEBUG_JFIF
-            dump_du(du);
-#endif
+            jfif_encode_du(jfif, DU_TYPE_LUMIN, du, &(dc[0]));
+            //- y du0
+
+            //+ y du1
+            isrc = yuv_datbuf[0] + (m * 16 + 0) * jw + n * 16 + 8;
+            idst = du;
+            for (i=0; i<8; i++) {
+                memcpy(idst, isrc, 8 * sizeof(int));
+                isrc += jw; idst += 8;
+            }
+            jfif_encode_du(jfif, DU_TYPE_LUMIN, du, &(dc[0]));
+            //- y du1
+
+            //+ y du2
+            isrc = yuv_datbuf[0] + (m * 16 + 8) * jw + n * 16 + 0;
+            idst = du;
+            for (i=0; i<8; i++) {
+                memcpy(idst, isrc, 8 * sizeof(int));
+                isrc += jw; idst += 8;
+            }
+            jfif_encode_du(jfif, DU_TYPE_LUMIN, du, &(dc[0]));
+            //- y du2
+
+            //+ y du3
+            isrc = yuv_datbuf[0] + (m * 16 + 8) * jw + n * 16 + 8;
+            idst = du;
+            for (i=0; i<8; i++) {
+                memcpy(idst, isrc, 8 * sizeof(int));
+                isrc += jw; idst += 8;
+            }
+            jfif_encode_du(jfif, DU_TYPE_LUMIN, du, &(dc[0]));
+            //- y du3
+
+            //+ u du
+            isrc = yuv_datbuf[1] + m * 8 * (jw/2) + n * 8;
+            idst = du;
+            for (i=0; i<8; i++) {
+                memcpy(idst, isrc, 8 * sizeof(int));
+                isrc += jw/2; idst += 8;
+            }
+            jfif_encode_du(jfif, DU_TYPE_CHROM, du, &(dc[1]));
+            //- u du
+
+            //+ v du
+            isrc = yuv_datbuf[2] + m * 8 * (jw/2) + n * 8;
+            idst = du;
+            for (i=0; i<8; i++) {
+                memcpy(idst, isrc, 8 * sizeof(int));
+                isrc += jw/2; idst += 8;
+            }
+            jfif_encode_du(jfif, DU_TYPE_CHROM, du, &(dc[2]));
+            //- v du
+            //-- encode mcu, yuv 4:2:0
         }
     }
+
+    bitstr_flush(bs);
+    jfif->datalen = bitstr_tell(bs);
     failed = 0;
 
 done:
