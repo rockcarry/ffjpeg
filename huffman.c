@@ -298,20 +298,22 @@ BOOL huffman_encode_run(HUFCODEC *phc)
 
 BOOL huffman_encode_step(HUFCODEC *phc, int data)
 {
-    int code, i;
+    unsigned code;
+    int      len ;
 
     /* 检查输入输出数据流的有效性 */
     if (!phc->output) return FALSE;
 
-    code = phc->codelist[data].code;
-    for (i=phc->codelist[data].depth-1; i>=0; i--) {
-        if (EOF == bitstr_putb((code & (1 << i)) ? 1 : 0, phc->output)) {
+    code = phc->codelist[data].code ;
+    len  = phc->codelist[data].depth;
+    code = code << (32 - len);
+    while (len--) {
+        if (EOF == bitstr_putb(code >> 31, phc->output)) {
             return FALSE;
         }
-#if ENABLE_DEBUG_DUMP
-        printf("%d", (code & (1 << i)) ? 1 : 0);
-#endif
+        code <<= 1;
     }
+
     return TRUE;
 }
 
