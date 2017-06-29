@@ -5,6 +5,9 @@
 extern "C" {
 #endif
 
+/* 全局变量声明 */
+extern const int ZIGZAG[64];
+
 /* 函数声明 */
 void zigzag_encode(int *data);
 void zigzag_decode(int *data);
