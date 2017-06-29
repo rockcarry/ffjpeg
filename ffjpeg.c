@@ -18,9 +18,6 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    // init color convert
-    init_color_convert();
-
     if (strcmp(argv[1], "-d") == 0) {
         jfif = jfif_load(argv[2]);
         jfif_decode(jfif, &bmp);
