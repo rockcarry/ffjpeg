@@ -84,6 +84,7 @@ int bmp_save(BMP *pb, char *file)
     header.biSize     = 40;
     header.biWidth    = pb->width;
     header.biHeight   = pb->height;
+    header.biPlanes   = 1;
     header.biBitCount = 24;
     header.biSizeImage= pb->stride * pb->height;
 
