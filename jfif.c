@@ -23,7 +23,6 @@ typedef struct {
 
     // quantization table
     int      *pqtab[16];
-    int      *pftab[16];
 
     // huffman codec ac
     HUFCODEC *phcac[16];
@@ -205,7 +204,7 @@ void* jfif_load(char *file)
         case 0xdb: { // DQT
                 int idx = buf[0] & 0x0f;
                 int f16 = buf[0] & 0xf0;
-                if (!jfif->pqtab[idx]) jfif->pqtab[idx] = calloc(1, 64 * sizeof(int));
+                if (!jfif->pqtab[idx]) jfif->pqtab[idx] = malloc(64 * sizeof(int));
                 if (!jfif->pqtab[idx]) break;
                 if (f16) { // 16bit
                     for (i=0; i<64; i++) {
@@ -241,7 +240,7 @@ void* jfif_load(char *file)
 read_data:
     fseek(fp, 0, SEEK_END);
     jfif->datalen = ftell(fp) - offset;
-    jfif->databuf = calloc(1, jfif->datalen);
+    jfif->databuf = malloc(jfif->datalen);
     if (jfif->databuf) {
         fseek(fp, offset, SEEK_SET);
         fread(jfif->databuf, jfif->datalen, 1, fp);
@@ -430,14 +429,6 @@ int jfif_decode(void *ctxt, BMP *pb)
         return -1;
     }
 
-    // init ftab for dct
-    for (i=0; i<16; i++) {
-        if (jfif->pqtab[i]) {
-            jfif->pftab[i] = malloc(64 * sizeof(int));
-            init_idct_ftab(jfif->pftab[i], jfif->pqtab[i]);
-        }
-    }
-
     // init huffman codec
     for (i=0; i<16; i++) {
         if (jfif->phcac[i]) {
@@ -456,6 +447,7 @@ int jfif_decode(void *ctxt, BMP *pb)
                 for (h=0; h<jfif->comp_info[c].samp_factor_h; h++) {
                     HUFCODEC *hcac = jfif->phcac[jfif->comp_info[c].htab_idx_ac];
                     HUFCODEC *hcdc = jfif->phcdc[jfif->comp_info[c].htab_idx_dc];
+                    int      *qtab = jfif->pqtab[jfif->comp_info[c].qtab_idx];
                     int size, znum, code;
                     int du[64] = {0};
 
@@ -488,8 +480,11 @@ int jfif_decode(void *ctxt, BMP *pb)
                     // de-zigzag
                     zigzag_decode(du);
 
+                    // de-quant
+                    quant_decode(du, qtab);
+
                     // idct
-                    idct2d8x8(du, jfif->pftab[jfif->comp_info[c].qtab_idx]);
+                    idct2d8x8(du);
 
                     // copy du to yuv buffer
                     x    = ((mcui % mcuc) * mcuw + h * 8) * jfif->comp_info[c].samp_factor_h / sfh_max;
@@ -510,14 +505,6 @@ int jfif_decode(void *ctxt, BMP *pb)
     for (i=0; i<16; i++) {
         if (jfif->phcac[i]) huffman_decode_done(jfif->phcac[i]);
         if (jfif->phcdc[i]) huffman_decode_done(jfif->phcdc[i]);
-    }
-
-    // free ftab
-    for (i=0; i<16; i++) {
-        if (jfif->pftab[i]) {
-            free(jfif->pftab[i]);
-            jfif->pftab[i] = NULL;
-        }
     }
 
     // close bit stream
@@ -568,14 +555,17 @@ static void jfif_encode_du(JFIF *jfif, int type, int du[64], int *dc)
 {
     HUFCODEC *hfcac = jfif->phcac[type];
     HUFCODEC *hfcdc = jfif->phcdc[type];
-    int      *pftab = jfif->pftab[type];
+    int      *pqtab = jfif->pqtab[type];
     void     *bs    = hfcac->output;
     int       diff, code, size;
     RLEITEM   rlelist[63];
     int       i, j, n, eob;
 
     // fdct
-    fdct2d8x8(du, pftab);
+    fdct2d8x8(du);
+
+    // quant
+    quant_encode(du, pqtab);
 
     // zigzag
     zigzag_encode(du);
@@ -652,16 +642,15 @@ void* jfif_encode(BMP *pb)
     jfif->height   = pb->height;
     jfif->pqtab[0] = malloc(64*sizeof(int));
     jfif->pqtab[1] = malloc(64*sizeof(int));
-    jfif->pftab[0] = malloc(64*sizeof(int));
-    jfif->pftab[1] = malloc(64*sizeof(int));
     jfif->phcac[0] = calloc(1, sizeof(HUFCODEC));
     jfif->phcac[1] = calloc(1, sizeof(HUFCODEC));
     jfif->phcdc[0] = calloc(1, sizeof(HUFCODEC));
     jfif->phcdc[1] = calloc(1, sizeof(HUFCODEC));
     jfif->datalen  = jfif->width * jfif->height * 2;
     jfif->databuf  = malloc(jfif->datalen);
-    if (  !jfif->pqtab[0] || !jfif->pqtab[1] || !jfif->pftab[0] || !jfif->pftab[1]
-       || !jfif->phcac[0] || !jfif->phcac[1] || !jfif->phcdc[0] || !jfif->phcdc[1]
+    if (  !jfif->pqtab[0] || !jfif->pqtab[1]
+       || !jfif->phcac[0] || !jfif->phcac[1]
+       || !jfif->phcdc[0] || !jfif->phcdc[1]
        || !jfif->databuf ) {
         goto done;
     }
@@ -669,8 +658,6 @@ void* jfif_encode(BMP *pb)
     // init qtab & ftab
     memcpy(jfif->pqtab[0], STD_QUANT_TAB_LUMIN, 64*sizeof(int));
     memcpy(jfif->pqtab[1], STD_QUANT_TAB_CHROM, 64*sizeof(int));
-    init_fdct_ftab(jfif->pftab[0], jfif->pqtab[0]);
-    init_fdct_ftab(jfif->pftab[1], jfif->pqtab[1]);
 
     // open bit stream
     bs = bitstr_open(BITSTR_MEM, (char*)jfif->databuf, (char*)jfif->datalen);

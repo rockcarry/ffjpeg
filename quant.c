@@ -1,7 +1,4 @@
 /* 包含头文件 */
-#include <string.h>
-#include "dct.h"
-#include "zigzag.h"
 #include "quant.h"
 
 /* 全局变量定义 */
@@ -29,23 +26,17 @@ const int STD_QUANT_TAB_CHROM[64] =
     99, 99, 99, 99, 99, 99, 99, 99,
 };
 
-void init_fdct_ftab(int *ftab, int *qtab)
+
+/* 函数实现 */
+void quant_encode(int du[64], int qtab[64])
 {
-    int i;
-    if (!ftab || !qtab) return;
-    for (i=0; i<64; i++) ftab[i] = FDCT_FACTOR_TAB[i] / qtab[i];
+    int i; for (i=0; i<64; i++) du[i] /= qtab[i];
 }
 
-void init_idct_ftab(int *ftab, int *qtab)
+void quant_decode(int du[64], int qtab[64])
 {
-    int i;
-    if (!ftab || !qtab) return;
-    for (i=0; i<64; i++) ftab[i] = IDCT_FACTOR_TAB[i] * qtab[i];
+    int i; for (i=0; i<64; i++) du[i] *= qtab[i];
 }
-
-
-
-
 
 
 

@@ -6,7 +6,7 @@
 #define DCTSIZE  8
 
 /* 内部全局变量定义 */
-int FDCT_FACTOR_TAB[64] =
+static const int FDCT_FACTOR_TAB[64] =
 {
      65536,  47248,  50159,  55733,  65536,  83411, 121094, 237535,
      47248,  34064,  36162,  40181,  47248,  60136,  87304, 171253,
@@ -18,7 +18,7 @@ int FDCT_FACTOR_TAB[64] =
     237535, 171253, 181802, 202007, 237535, 302325, 438909, 860951,
 };
 
-int IDCT_FACTOR_TAB[64] =
+static const int IDCT_FACTOR_TAB[64] =
 {
     65536,  90901,  85626,  77062,  65536,  51491,  35467,  18081,
     90901, 126083, 118767, 106888,  90901,  71420,  49195,  25079,
@@ -42,7 +42,7 @@ int IDCT_FACTOR_TAB[64] =
  */
 
 /* 函数实现 */
-void fdct2d8x8(int *data, int *ftab)
+void fdct2d8x8(int *data)
 {
     int tmp0,  tmp1,  tmp2,  tmp3;
     int tmp4,  tmp5,  tmp6,  tmp7;
@@ -147,15 +147,14 @@ void fdct2d8x8(int *data, int *ftab)
         dataptr++;  /* advance pointer to next column */
     }
 
-    if (!ftab) ftab = FDCT_FACTOR_TAB;
     for (i=0; i<64; i++)
     {
-        data[i]  *= ftab[i];
+        data[i]  *= FDCT_FACTOR_TAB[i];
         data[i] >>= 19;
     }
 }
 
-void idct2d8x8(int *data, int *ftab)
+void idct2d8x8(int *data)
 {
     int  tmp0,  tmp1,  tmp2,  tmp3;
     int  tmp4,  tmp5,  tmp6,  tmp7;
@@ -164,10 +163,9 @@ void idct2d8x8(int *data, int *ftab)
     int *dataptr;
     int  ctr, i;
 
-    if (!ftab) ftab = IDCT_FACTOR_TAB;
     for (i=0; i<64; i++)
     {
-        data[i]  *= ftab[i];
+        data[i]  *= IDCT_FACTOR_TAB[i];
         data[i] >>= 13;
     }
 

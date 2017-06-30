@@ -10,8 +10,8 @@ extern const int STD_QUANT_TAB_LUMIN[64];
 extern const int STD_QUANT_TAB_CHROM[64];
 
 /* º¯ÊıÉùÃ÷ */
-void init_fdct_ftab(int *ftab, int *qtab);
-void init_idct_ftab(int *ftab, int *qtab);
+void quant_encode(int du[64], int qtab[64]);
+void quant_decode(int du[64], int qtab[64]);
 
 #ifdef __cplusplus
 }
