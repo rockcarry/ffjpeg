@@ -25,7 +25,7 @@ void yuv_to_rgb(int y, int u, int v, BYTE *r, BYTE *g, BYTE *b)
 
 void rgb_to_yuv(BYTE r, BYTE g, BYTE b, int *y, int *u, int *v)
 {
-    *y = ((19595 * r + 38470 * g + 7471 * b) >> 16) - 128;
+    *y = (( 19595 * r + 38470 * g + 7471 * b) >> 16) - 128;
     *u = ((-11076 * r - 21692 * g) >> 16) + (b >> 1);
     *v = ((-27460 * g - 5308  * b) >> 16) + (r >> 1);
 }
