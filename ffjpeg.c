@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "jfif.h"
 #include "color.h"
 #include "bmp.h"
