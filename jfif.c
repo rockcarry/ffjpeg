@@ -123,28 +123,6 @@ static int ALIGN(int x, int y) {
     return (x + y - 1) & ~(y - 1);
 }
 
-static int bitstr_get_bits(void *stream, int n)
-{
-    int buf = 0;
-    while (n--) {
-        buf <<= 1;
-        buf  |= bitstr_getb(stream);
-    }
-    return buf;
-}
-
-static int bitstr_put_bits(void *stream, int bits, int n)
-{
-    unsigned buf = bits << (32 - n);
-    while (n--) {
-        if (EOF == bitstr_putb(buf >> 31, stream)) {
-            return EOF;
-        }
-        buf <<= 1;
-    }
-    return bits;
-}
-
 static void category_encode(int *code, int *size)
 {
     unsigned absc = abs(*code);
@@ -579,9 +557,70 @@ done:
 
 #define DU_TYPE_LUMIN  0
 #define DU_TYPE_CHROM  1
+
+typedef struct {
+    unsigned runlen   : 4;
+    unsigned codesize : 4;
+    unsigned codedata : 16;
+} RLEITEM;
+
 static void jfif_encode_du(JFIF *jfif, int type, int du[64], int *dc)
 {
-    // todo...
+    HUFCODEC *hfcac = jfif->phcac[type];
+    HUFCODEC *hfcdc = jfif->phcdc[type];
+    int      *pftab = jfif->pftab[type];
+    void     *bs    = hfcac->output;
+    int       diff, code, size;
+    RLEITEM   rlelist[63];
+    int       i, j, n, eob;
+
+    // fdct
+    fdct2d8x8(du, pftab);
+
+    // zigzag
+    zigzag_encode(du);
+
+    // dc
+    diff = du[0] - *dc;
+    *dc  = du[0];
+
+    // category encode for dc
+    code = diff;
+    category_encode(&code, &size);
+
+    // huffman encode for dc
+    huffman_encode_step(hfcdc, size);
+    bitstr_put_bits(bs, code, size);
+
+    // rle encode for ac
+    for (i=1, j=0, n=0, eob=0; i<64 && j<63; i++) {
+        if (du[i] == 0 && n < 15) {
+            n++;
+        } else {
+            code = du[i]; size = 0;
+            category_encode(&code, &size);
+            rlelist[j].runlen   = n;
+            rlelist[j].codesize = size;
+            rlelist[j].codedata = code;
+            n = 0;
+            j++;
+            if (size != 0) eob = j;
+        }
+    }
+
+    // set eob
+    if (du[63] == 0) {
+        rlelist[eob].runlen   = 0;
+        rlelist[eob].codesize = 0;
+        rlelist[eob].codedata = 0;
+        j = eob + 1;
+    }
+
+    // huffman encode for ac
+    for (i=0; i<j; i++) {
+        huffman_encode_step(hfcac, (rlelist[i].runlen << 4) | (rlelist[i].codesize << 0));
+        bitstr_put_bits(bs, rlelist[i].codedata, rlelist[i].codesize);
+    }
 }
 
 void* jfif_encode(BMP *pb)
@@ -674,9 +713,9 @@ void* jfif_encode(BMP *pb)
     // init jw & jw, init yuv data buffer
     jw = ALIGN(pb->width , 16);
     jh = ALIGN(pb->height, 16);
-    yuv_datbuf[0] = malloc(jw * jh / 1 * sizeof(int));
-    yuv_datbuf[1] = malloc(jw * jh / 4 * sizeof(int));
-    yuv_datbuf[2] = malloc(jw * jh / 4 * sizeof(int));
+    yuv_datbuf[0] = calloc(1, jw * jh / 1 * sizeof(int));
+    yuv_datbuf[1] = calloc(1, jw * jh / 4 * sizeof(int));
+    yuv_datbuf[2] = calloc(1, jw * jh / 4 * sizeof(int));
     if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2]) {
         goto done;
     }
@@ -688,7 +727,7 @@ void* jfif_encode(BMP *pb)
     vdst = yuv_datbuf[2];
     for (i=0; i<pb->height; i++) {
         for (j=0; j<pb->width; j++) {
-            rgb_to_yuv(bsrc[0], bsrc[1], bsrc[2], ydst, udst, vdst);
+            rgb_to_yuv(bsrc[2], bsrc[1], bsrc[0], ydst, udst, vdst);
             bsrc += 3;
             ydst += 1;
             if (j & 1) {
@@ -771,9 +810,6 @@ void* jfif_encode(BMP *pb)
             //-- encode mcu, yuv 4:2:0
         }
     }
-
-    bitstr_flush(bs);
-    jfif->datalen = bitstr_tell(bs);
     failed = 0;
 
 done:
@@ -787,6 +823,7 @@ done:
     huffman_encode_done(jfif->phcac[1]);
     huffman_encode_done(jfif->phcdc[0]);
     huffman_encode_done(jfif->phcdc[1]);
+    jfif->datalen = bitstr_tell(bs);
 
     // close bit stream
     bitstr_close(bs);

@@ -261,7 +261,7 @@ void huffman_encode_init(HUFCODEC *phc, int flag)
 void huffman_encode_done(HUFCODEC *phc)
 {
     /* flush bitstr */
-    bitstr_flush(phc->output);
+    bitstr_flush(phc->output, 1);
 }
 
 BOOL huffman_encode_run(HUFCODEC *phc)
@@ -275,20 +275,13 @@ BOOL huffman_encode_run(HUFCODEC *phc)
 
     /* 对输入码流进行编码并输出 */
     while (1) {
+        int code, len;
         int data = bitstr_getc(phc->input);
         if (data == EOF) break;
-
-        {
-            int code, i;
-            code = phc->codelist[data].code;
-            for (i=phc->codelist[data].depth-1; i>=0; i--) {
-                if (EOF == bitstr_putb((code & (1 << i)) ? 1 : 0, phc->output)) {
-                    return FALSE;
-                }
-#if ENABLE_DEBUG_DUMP
-                printf("%d", (code & (1 << i)) ? 1 : 0);
-#endif
-            }
+        code = phc->codelist[data].code ;
+        len  = phc->codelist[data].depth;
+        if (EOF == bitstr_put_bits(phc->input, code, len)) {
+            return FALSE;
         }
     }
 
@@ -306,12 +299,8 @@ BOOL huffman_encode_step(HUFCODEC *phc, int data)
 
     code = phc->codelist[data].code ;
     len  = phc->codelist[data].depth;
-    code = code << (32 - len);
-    while (len--) {
-        if (EOF == bitstr_putb(code >> 31, phc->output)) {
-            return FALSE;
-        }
-        code <<= 1;
+    if (EOF == bitstr_put_bits(phc->output, code, len)) {
+        return FALSE;
     }
 
     return TRUE;

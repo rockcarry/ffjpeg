@@ -11,7 +11,7 @@
 /* 内部类型定义 */
 typedef struct {
     int   type;
-    int   bitbuf;
+    DWORD bitbuf;
     int   bitnum;
     BYTE *membuf;
     int   memlen;
@@ -88,7 +88,7 @@ static int mbitstr_flush(void *stream) { return stream ? 0 : EOF; }
 /* 内部类型定义 */
 typedef struct {
     int   type;
-    int   bitbuf;
+    DWORD bitbuf;
     int   bitnum;
     FILE *fp;
 } FBITSTR;
@@ -280,10 +280,38 @@ int bitstr_putb(int b, void *stream)
     return b;
 }
 
-int bitstr_flush(void *stream)
+int bitstr_get_bits(void *stream, int n)
 {
-    int type = *(int*)stream;
-    switch (type) {
+    int buf = 0;
+    while (n--) {
+        buf <<= 1;
+        buf  |= bitstr_getb(stream);
+    }
+    return buf;
+}
+
+int bitstr_put_bits(void *stream, int bits, int n)
+{
+    unsigned buf = bits << (32 - n);
+    while (n--) {
+        if (EOF == bitstr_putb(buf >> 31, stream)) {
+            return EOF;
+        }
+        buf <<= 1;
+    }
+    return bits;
+}
+
+int bitstr_flush(void *stream, int flag)
+{
+    FBITSTR *context = (FBITSTR*)stream;
+    if (!context) return EOF;
+
+    // output
+    bitstr_put_bits(stream, flag ? -1 : 0, context->bitnum ? 8 - context->bitnum : 0);
+
+    // flush
+    switch (context->type) {
     case BITSTR_MEM : return mbitstr_flush(stream);
     case BITSTR_FILE: return fbitstr_flush(stream);
     }
