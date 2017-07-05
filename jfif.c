@@ -371,9 +371,10 @@ void jfif_free(void *ctxt)
 
 int jfif_decode(void *ctxt, BMP *pb)
 {
-    JFIF *jfif = (JFIF*)ctxt;
-    void *bs   = NULL;
-    int   dc[4]= {0};
+    JFIF *jfif    = (JFIF*)ctxt;
+    void *bs      = NULL;
+    int  *ftab[16]= {0};
+    int   dc[4]   = {0};
     int   mcuw, mcuh, mcuc, mcur, mcui, jw, jh;
     int   i, j, c, h, v, x, y;
     int   sfh_max = 0;
@@ -390,6 +391,22 @@ int jfif_decode(void *ctxt, BMP *pb)
         printf("invalid input params !\n");
         return -1;
     }
+
+    // init dct module
+    init_dct_module();
+
+    //++ init ftab
+    for (i=0; i<16; i++) {
+        if (jfif->pqtab[i]) {
+            ftab[i] = malloc(64 * sizeof(int));
+            if (ftab[i]) {
+                init_idct_ftab(ftab[i], jfif->pqtab[i]);
+            } else {
+                goto done;
+            }
+        }
+    }
+    //-- init ftab
 
     //++ calculate mcu info
     for (c=0; c<jfif->comp_num; c++) {
@@ -447,7 +464,7 @@ int jfif_decode(void *ctxt, BMP *pb)
                 for (h=0; h<jfif->comp_info[c].samp_factor_h; h++) {
                     HUFCODEC *hcac = jfif->phcac[jfif->comp_info[c].htab_idx_ac];
                     HUFCODEC *hcdc = jfif->phcdc[jfif->comp_info[c].htab_idx_dc];
-                    int      *qtab = jfif->pqtab[jfif->comp_info[c].qtab_idx];
+                    int       fidx = jfif->comp_info[c].qtab_idx;
                     int size, znum, code;
                     int du[64] = {0};
 
@@ -480,11 +497,8 @@ int jfif_decode(void *ctxt, BMP *pb)
                     // de-zigzag
                     zigzag_decode(du);
 
-                    // de-quant
-                    quant_decode(du, qtab);
-
                     // idct
-                    idct2d8x8(du);
+                    idct2d8x8(du, ftab[fidx]);
 
                     // copy du to yuv buffer
                     x    = ((mcui % mcuc) * mcuw + h * 8) * jfif->comp_info[c].samp_factor_h / sfh_max;
@@ -539,6 +553,13 @@ done:
     if (yuv_datbuf[0]) free(yuv_datbuf[0]);
     if (yuv_datbuf[1]) free(yuv_datbuf[1]);
     if (yuv_datbuf[2]) free(yuv_datbuf[2]);
+    //++ free ftab
+    for (i=0; i<16; i++) {
+        if (ftab[i]) {
+            free(ftab[i]);
+        }
+    }
+    //-- free ftab
     return ret;
 }
 
@@ -562,7 +583,7 @@ static void jfif_encode_du(JFIF *jfif, int type, int du[64], int *dc)
     int       i, j, n, eob;
 
     // fdct
-    fdct2d8x8(du);
+    fdct2d8x8(du, NULL);
 
     // quant
     quant_encode(du, pqtab);
@@ -637,6 +658,9 @@ void* jfif_encode(BMP *pb)
     jfif = calloc(1, sizeof(JFIF));
     if (!jfif) return NULL;
 
+    // init dct module
+    init_dct_module();
+
     // init jfif context
     jfif->width    = pb->width;
     jfif->height   = pb->height;
@@ -655,7 +679,7 @@ void* jfif_encode(BMP *pb)
         goto done;
     }
 
-    // init qtab & ftab
+    // init qtab
     memcpy(jfif->pqtab[0], STD_QUANT_TAB_LUMIN, 64*sizeof(int));
     memcpy(jfif->pqtab[1], STD_QUANT_TAB_CHROM, 64*sizeof(int));
 

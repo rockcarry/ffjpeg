@@ -13,6 +13,11 @@ typedef unsigned short WORD;
 typedef unsigned long DWORD;
 #endif
 
+//++ for fixed point
+#define FIXQ          11
+#define FLOAT2FIX(f)  ((int)((f) * (1 << 11)))
+//-- for fixed point
+
 #endif
 
 

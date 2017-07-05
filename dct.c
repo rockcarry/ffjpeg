@@ -1,4 +1,5 @@
 /* 包含头文件 */
+#include "stdefine.h"
 #include "dct.h"
 
 #if 1 /* 快速的整数运算版本 */
@@ -6,50 +7,82 @@
 #define DCTSIZE  8
 
 /* 内部全局变量定义 */
-static const int FDCT_FACTOR_TAB[64] =
-{
-     65536,  47248,  50159,  55733,  65536,  83411, 121094, 237535,
-     47248,  34064,  36162,  40181,  47248,  60136,  87304, 171253,
-     50159,  36162,  38390,  42656,  50159,  63840,  92681, 181802,
-     55733,  40181,  42656,  47397,  55733,  70935, 102982, 202007,
-     65536,  47248,  50159,  55733,  65536,  83411, 121094, 237535,
-     83411,  60136,  63840,  70935,  83411, 106162, 154124, 302325,
-    121094,  87304,  92681, 102982, 121094, 154124, 223753, 438909,
-    237535, 171253, 181802, 202007, 237535, 302325, 438909, 860951,
+static const float AAN_DCT_FACTOR[DCTSIZE] = {
+    1.0f, 1.387039845f, 1.306562965f, 1.175875602f,
+    1.0f, 0.785694958f, 0.541196100f, 0.275899379f,
 };
 
-static const int IDCT_FACTOR_TAB[64] =
-{
-    65536,  90901,  85626,  77062,  65536,  51491,  35467,  18081,
-    90901, 126083, 118767, 106888,  90901,  71420,  49195,  25079,
-    85626, 118767, 111876, 100686,  85626,  67276,  46340,  23624,
-    77062, 106888, 100686,  90615,  77062,  60547,  41705,  21261,
-    65536,  90901,  85626,  77062,  65536,  51491,  35467,  18081,
-    51491,  71420,  67276,  60547,  51491,  40456,  27866,  14206,
-    35467,  49195,  46340,  41705,  35467,  27866,  19195,   9785,
-    18081,  25079,  23624,  21261,  18081,  14206,   9785,   4988,
-};
+static int g_inited         =  0;
+static int g_fdctfactor[64] = {0};
+static int g_idctfactor[64] = {0};
 
-/*
-  46341  / 65536 = 0.707106781f
-  25080  / 65536 = 0.382683433f
-  35468  / 65536 = 0.541196100f
-  85627  / 65536 = 1.306562965f
-  92682  / 65536 = 1.414213562f
-  121095 / 65536 = 1.847759065f
-  70936  / 65536 = 1.082392200f
-  171254 / 65536 = 2.613125930f
- */
+void init_dct_module(void)
+{
+    int   i, j;
+    float factor[64];
+
+    // check inited
+    if (g_inited) return;
+    else g_inited = 1;
+
+    // fdct factor
+    for (i=0; i<DCTSIZE; i++) {
+        for (j=0; j<DCTSIZE; j++) {
+            factor[i * 8 + j] = 1.0f / (AAN_DCT_FACTOR[i] * AAN_DCT_FACTOR[j] * 8);
+        }
+    }
+    for (i=0; i<64; i++) {
+        g_fdctfactor[i] = FLOAT2FIX(factor[i]);
+    }
+
+    // idct factor
+    for (i=0; i<DCTSIZE; i++) {
+        for (j=0; j<DCTSIZE; j++) {
+            factor[i * 8 + j] = 1.0f * (AAN_DCT_FACTOR[i] * AAN_DCT_FACTOR[j] / 8);
+        }
+    }
+    for (i=0; i<64; i++) {
+        g_idctfactor[i] = FLOAT2FIX(factor[i]);
+    }
+}
+
+void init_fdct_ftab(int *ftab, int *qtab)
+{
+    int   i, j;
+    float factor[64];
+    for (i=0; i<8; i++) {
+        for (j=0; j<8; j++) {
+            factor[i * 8 + j] = 1.0f / (AAN_DCT_FACTOR[i] * AAN_DCT_FACTOR[j] * 8);
+        }
+    }
+    for (i=0; i<64; i++) {
+        ftab[i] = FLOAT2FIX(factor[i] / qtab[i]);
+    }
+}
+
+void init_idct_ftab(int *ftab, int *qtab)
+{
+    int   i, j;
+    float factor[64];
+    for (i=0; i<8; i++) {
+        for (j=0; j<8; j++) {
+            factor[i * 8 + j] = 1.0f * (AAN_DCT_FACTOR[i] * AAN_DCT_FACTOR[j] / 8);
+        }
+    }
+    for (i=0; i<64; i++) {
+        ftab[i] = FLOAT2FIX(factor[i] * qtab[i]);
+    }
+}
 
 /* 函数实现 */
-void fdct2d8x8(int *data)
+void fdct2d8x8(int *data, int *ftab)
 {
     int tmp0,  tmp1,  tmp2,  tmp3;
     int tmp4,  tmp5,  tmp6,  tmp7;
     int tmp10, tmp11, tmp12, tmp13;
     int z1, z2, z3, z4, z5, z11, z13;
     int *dataptr;
-    int ctr, i;
+    int ctr;
 
     /* Pass 1: process rows. */
     dataptr = data;
@@ -63,7 +96,7 @@ void fdct2d8x8(int *data)
         tmp5 = dataptr[2] - dataptr[5];
         tmp3 = dataptr[3] + dataptr[4];
         tmp4 = dataptr[3] - dataptr[4];
-    
+
         /* Even part */
         tmp10 = tmp0 + tmp3;  /* phase 2 */
         tmp13 = tmp0 - tmp3;
@@ -73,7 +106,7 @@ void fdct2d8x8(int *data)
         dataptr[0] = tmp10 + tmp11;  /* phase 3 */
         dataptr[4] = tmp10 - tmp11;
 
-        z1 = (tmp12 + tmp13) * 46341 >> 16; /* c4 */
+        z1 = (tmp12 + tmp13) * FLOAT2FIX(0.707106781f) >> FIXQ; /* c4 */
         dataptr[2] = tmp13 + z1;  /* phase 5 */
         dataptr[6] = tmp13 - z1;
 
@@ -83,10 +116,10 @@ void fdct2d8x8(int *data)
         tmp12 = tmp6 + tmp7;
 
         /* The rotator is modified from fig 4-8 to avoid extra negations. */
-        z5 = (tmp10 - tmp12) * 25080 >> 16;  /* c6 */
-        z2 = (tmp10 * 35468 >> 16) + z5;     /* c2-c6 */
-        z4 = (tmp12 * 85627 >> 16) + z5;     /* c2+c6 */
-        z3 =  tmp11 * 46341 >> 16;           /* c4 */
+        z5 = (tmp10 - tmp12) * FLOAT2FIX(0.382683433f) >> FIXQ;  /* c6 */
+        z2 = (FLOAT2FIX(0.541196100f) * tmp10 >> FIXQ) + z5;     /* c2-c6 */
+        z4 = (FLOAT2FIX(1.306562965f) * tmp12 >> FIXQ) + z5;     /* c2+c6 */
+        z3 = tmp11 * FLOAT2FIX(0.707106781f) >> FIXQ;            /* c4 */
 
         z11 = tmp7 + z3;        /* phase 5 */
         z13 = tmp7 - z3;
@@ -121,7 +154,7 @@ void fdct2d8x8(int *data)
         dataptr[DCTSIZE * 0] = tmp10 + tmp11;  /* phase 3 */
         dataptr[DCTSIZE * 4] = tmp10 - tmp11;
 
-        z1 = (tmp12 + tmp13) * 46341 >> 16; /* c4 */
+        z1 = (tmp12 + tmp13) * FLOAT2FIX(0.707106781f) >> FIXQ; /* c4 */
         dataptr[DCTSIZE * 2] = tmp13 + z1;  /* phase 5 */
         dataptr[DCTSIZE * 6] = tmp13 - z1;
 
@@ -131,10 +164,10 @@ void fdct2d8x8(int *data)
         tmp12 = tmp6 + tmp7;
 
         /* The rotator is modified from fig 4-8 to avoid extra negations. */
-        z5 = (tmp10 - tmp12) * 25080 >> 16;  /* c6 */
-        z2 = (tmp10 * 35468 >> 16) + z5;     /* c2-c6 */
-        z4 = (tmp12 * 85627 >> 16) + z5;     /* c2+c6 */
-        z3 =  tmp11 * 46341 >> 16;           /* c4 */
+        z5 = (tmp10 - tmp12) * FLOAT2FIX(0.382683433f) >> FIXQ;  /* c6 */
+        z2 = (FLOAT2FIX(0.541196100f) * tmp10 >> FIXQ) + z5;     /* c2-c6 */
+        z4 = (FLOAT2FIX(1.306562965f) * tmp12 >> FIXQ) + z5;     /* c2+c6 */
+        z3 = tmp11 * FLOAT2FIX(0.707106781f) >> FIXQ;            /* c4 */
 
         z11 = tmp7 + z3;  /* phase 5 */
         z13 = tmp7 - z3;
@@ -147,34 +180,33 @@ void fdct2d8x8(int *data)
         dataptr++;  /* advance pointer to next column */
     }
 
-    for (i=0; i<64; i++)
-    {
-        data[i]  *= FDCT_FACTOR_TAB[i];
-        data[i] >>= 19;
+    ftab = ftab ? ftab : g_fdctfactor;
+    for (ctr=0; ctr<64; ctr++) {
+        data[ctr]  *= ftab[ctr];
+        data[ctr] >>= FIXQ + 2;
     }
 }
 
-void idct2d8x8(int *data)
+void idct2d8x8(int *data, int *ftab)
 {
     int  tmp0,  tmp1,  tmp2,  tmp3;
     int  tmp4,  tmp5,  tmp6,  tmp7;
     int  tmp10, tmp11, tmp12, tmp13;
     int  z5, z10, z11, z12, z13;
     int *dataptr;
-    int  ctr, i;
+    int  ctr;
 
-    for (i=0; i<64; i++)
-    {
-        data[i]  *= IDCT_FACTOR_TAB[i];
-        data[i] >>= 13;
+    ftab = ftab ? ftab : g_idctfactor;
+    for (ctr=0; ctr<64; ctr++) {
+        data[ctr] *= ftab[ctr];
     }
 
     /* Pass 1: process rows. */
     dataptr = data;
     for (ctr=0; ctr<DCTSIZE; ctr++)
     {
-        if ( dataptr[1] + dataptr[2] + dataptr[3] + dataptr[4] +
-             dataptr[5] + dataptr[6] + dataptr[7] == 0 )
+        if ( dataptr[1] + dataptr[2] + dataptr[3] + dataptr[4]
+           + dataptr[5] + dataptr[6] + dataptr[7] == 0 )
         {
             dataptr[1] = dataptr[0];
             dataptr[2] = dataptr[0];
@@ -197,17 +229,16 @@ void idct2d8x8(int *data)
         tmp10 = tmp0 + tmp2;    /* phase 3 */
         tmp11 = tmp0 - tmp2;
 
-        tmp13   = tmp1 + tmp3;   /* phases 5-3 */
-        tmp12   = tmp1 - tmp3;   /* 2 * c4 */
-        tmp12  *= 92682;
-        tmp12 >>= 16;
-        tmp12  -= tmp13;
+        tmp13  = tmp1 + tmp3;   /* phases 5-3 */
+        tmp12  = tmp1 - tmp3;   /* 2 * c4 */
+        tmp12 *= FLOAT2FIX(1.414213562f); tmp12 >>= FIXQ;
+        tmp12 -= tmp13;
 
         tmp0 = tmp10 + tmp13;   /* phase 2 */
         tmp3 = tmp10 - tmp13;
         tmp1 = tmp11 + tmp12;
         tmp2 = tmp11 - tmp12;
-    
+
         /* Odd part */
         tmp4 = dataptr[1];
         tmp5 = dataptr[3];
@@ -219,14 +250,13 @@ void idct2d8x8(int *data)
         z11 = tmp4 + tmp7;
         z12 = tmp4 - tmp7;
 
-        tmp7    = z11 + z13;   /* phase 5 */
-        tmp11   = z11 - z13;   /* 2 * c4 */
-        tmp11  *= 92682;
-        tmp11 >>= 16;
+        tmp7   = z11 + z13;   /* phase 5 */
+        tmp11  = z11 - z13;   /* 2 * c4 */
+        tmp11 *= FLOAT2FIX(1.414213562f); tmp11 >>= FIXQ;
 
-        z5 = (z10 + z12) * 121095 >> 16;  /*  2 * c2 */
-        tmp10 =  (z12 *  70936 >> 16) - z5; /*  2 * (c2 - c6) */
-        tmp12 = -(z10 * 171254 >> 16) + z5; /* -2 * (c2 + c6) */
+        z5 = (z10 + z12) * FLOAT2FIX(1.847759065f) >> FIXQ;  /*  2 * c2 */
+        tmp10 = (FLOAT2FIX( 1.082392200f) * z12 >> FIXQ) - z5; /*  2 * (c2 - c6) */
+        tmp12 = (FLOAT2FIX(-2.613125930f) * z10 >> FIXQ) + z5; /* -2 * (c2 + c6) */
 
         tmp6 = tmp12 - tmp7;    /* phase 2 */
         tmp5 = tmp11 - tmp6;
@@ -257,17 +287,16 @@ void idct2d8x8(int *data)
         tmp10 = tmp0 + tmp2;    /* phase 3 */
         tmp11 = tmp0 - tmp2;
 
-        tmp13   = tmp1 + tmp3;   /* phases 5-3 */
-        tmp12   = tmp1 - tmp3;   /* 2 * c4 */
-        tmp12  *= 92682;
-        tmp12 >>= 16;
-        tmp12  -= tmp13;
+        tmp13  = tmp1 + tmp3;   /* phases 5-3 */
+        tmp12  = tmp1 - tmp3;   /* 2 * c4 */
+        tmp12 *= FLOAT2FIX(1.414213562f); tmp12 >>= FIXQ;
+        tmp12 -= tmp13;
 
         tmp0 = tmp10 + tmp13;   /* phase 2 */
         tmp3 = tmp10 - tmp13;
         tmp1 = tmp11 + tmp12;
         tmp2 = tmp11 - tmp12;
-    
+
         /* Odd part */
         tmp4 = dataptr[DCTSIZE * 1];
         tmp5 = dataptr[DCTSIZE * 3];
@@ -279,27 +308,26 @@ void idct2d8x8(int *data)
         z11 = tmp4 + tmp7;
         z12 = tmp4 - tmp7;
 
-        tmp7    = z11 + z13;   /* phase 5 */
-        tmp11   = z11 - z13;   /* 2 * c4 */
-        tmp11  *= 92682;
-        tmp11 >>= 16;
+        tmp7   = z11 + z13;   /* phase 5 */
+        tmp11  = z11 - z13;   /* 2 * c4 */
+        tmp11 *= FLOAT2FIX(1.414213562f); tmp11 >>= FIXQ;
 
-        z5 = (z10 + z12) * 121095 >> 16;  /*  2 * c2 */
-        tmp10 =  (z12 *  70936 >> 16) - z5; /*  2 * (c2 - c6) */
-        tmp12 = -(z10 * 171254 >> 16) + z5; /* -2 * (c2 + c6) */
+        z5 = (z10 + z12) * FLOAT2FIX(1.847759065f) >> FIXQ;  /*  2 * c2 */
+        tmp10 = (FLOAT2FIX( 1.082392200f) * z12 >> FIXQ) - z5; /*  2 * (c2 - c6) */
+        tmp12 = (FLOAT2FIX(-2.613125930f) * z10 >> FIXQ) + z5; /* -2 * (c2 + c6) */
 
         tmp6 = tmp12 - tmp7;    /* phase 2 */
         tmp5 = tmp11 - tmp6;
         tmp4 = tmp10 + tmp5;
 
-        dataptr[DCTSIZE * 0] = (tmp0 + tmp7) >> 6;
-        dataptr[DCTSIZE * 7] = (tmp0 - tmp7) >> 6;
-        dataptr[DCTSIZE * 1] = (tmp1 + tmp6) >> 6;
-        dataptr[DCTSIZE * 6] = (tmp1 - tmp6) >> 6;
-        dataptr[DCTSIZE * 2] = (tmp2 + tmp5) >> 6;
-        dataptr[DCTSIZE * 5] = (tmp2 - tmp5) >> 6;
-        dataptr[DCTSIZE * 4] = (tmp3 + tmp4) >> 6;
-        dataptr[DCTSIZE * 3] = (tmp3 - tmp4) >> 6;
+        dataptr[DCTSIZE * 0] = tmp0 + tmp7;
+        dataptr[DCTSIZE * 7] = tmp0 - tmp7;
+        dataptr[DCTSIZE * 1] = tmp1 + tmp6;
+        dataptr[DCTSIZE * 6] = tmp1 - tmp6;
+        dataptr[DCTSIZE * 2] = tmp2 + tmp5;
+        dataptr[DCTSIZE * 5] = tmp2 - tmp5;
+        dataptr[DCTSIZE * 4] = tmp3 + tmp4;
+        dataptr[DCTSIZE * 3] = tmp3 - tmp4;
 
         dataptr++; /* advance pointers to next column */
     }
@@ -331,7 +359,8 @@ static initdctfactor()
 /* 函数实现 */
 void fdct2d8x8(float *data)
 {
-    float tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
+    float tmp0, tmp1, tmp2, tmp3;
+    float tmp4, tmp5, tmp6, tmp7;
     float tmp10, tmp11, tmp12, tmp13;
     float z1, z2, z3, z4, z5, z11, z13;
     float *dataptr;
@@ -349,7 +378,7 @@ void fdct2d8x8(float *data)
         tmp5 = dataptr[2] - dataptr[5];
         tmp3 = dataptr[3] + dataptr[4];
         tmp4 = dataptr[3] - dataptr[4];
-    
+
         /* Even part */
         tmp10 = tmp0 + tmp3;  /* phase 2 */
         tmp13 = tmp0 - tmp3;
@@ -465,7 +494,7 @@ void idct2d8x8(float *data)
         tmp3 = tmp10 - tmp13;
         tmp1 = tmp11 + tmp12;
         tmp2 = tmp11 - tmp12;
-    
+
         /* Odd part */
         tmp4 = dataptr[1];
         tmp5 = dataptr[3];
@@ -479,7 +508,7 @@ void idct2d8x8(float *data)
 
         tmp7   = z11 + z13;   /* phase 5 */
         tmp11  = z11 - z13;   /* 2 * c4 */
-        tmp11 *= 1.414213562f; 
+        tmp11 *= 1.414213562f;
 
         z5 = (z10 + z12) * 1.847759065f;  /*  2 * c2 */
         tmp10 =  1.082392200f * z12 - z5; /*  2 * (c2 - c6) */
@@ -523,7 +552,7 @@ void idct2d8x8(float *data)
         tmp3 = tmp10 - tmp13;
         tmp1 = tmp11 + tmp12;
         tmp2 = tmp11 - tmp12;
-    
+
         /* Odd part */
         tmp4 = dataptr[DCTSIZE * 1];
         tmp5 = dataptr[DCTSIZE * 3];
@@ -537,7 +566,7 @@ void idct2d8x8(float *data)
 
         tmp7   = z11 + z13;   /* phase 5 */
         tmp11  = z11 - z13;   /* 2 * c4 */
-        tmp11 *= 1.414213562f; 
+        tmp11 *= 1.414213562f;
 
         z5 = (z10 + z12) * 1.847759065f;  /*  2 * c2 */
         tmp10 =  1.082392200f * z12 - z5; /*  2 * (c2 - c6) */
@@ -779,7 +808,6 @@ void idct2d8x8(float *data)
                     temp += alpha(u) * alpha(v) * (data[v * 8 + u]
                           * (float)cos((2.0f * x + 1.0f) / 16.0f * u * M_PI)
                           * (float)cos((2.0f * y + 1.0f) / 16.0f * v * M_PI));
-                    
                 }
             }
             buf[y * 8 + x] = (char)(temp + 0.5);

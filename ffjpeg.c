@@ -1,8 +1,8 @@
+// 包含头文件
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "jfif.h"
-#include "color.h"
 #include "bmp.h"
 
 int main(int argc, char *argv[])
