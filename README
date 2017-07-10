@@ -24,7 +24,12 @@ correct code. after many years, someone ask me how to encoding and decoding jpeg
 of my code, and put it on github. yes, it was ffjpeg library. i tried my best, to make code
 simple and easy to read. for your reference.
 
+want to learn more?
+==================
+want to learn more about ffjpeg, please visit our wiki.
+https://github.com/rockcarry/ffjpeg/wiki
+
+
 
 2016-05-03
 rockcarry
-
