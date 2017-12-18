@@ -13,8 +13,9 @@ int main(int argc, char *argv[])
     if (argc < 3) {
         printf(
             "jfif test program\n"
-            "usage: jfif -d filename decode jpg file to decode.bmp\n"
-            "       jfif -e filename encode bmp file to encode.jpg\n"
+            "usage: %s -d filename decode jpg file to decode.bmp\n"
+            "       %s -e filename encode bmp file to encode.jpg\n",
+            argv[0], argv[0]
         );
         return 0;
     }

@@ -24,6 +24,21 @@ correct code. after many years, someone ask me how to encoding and decoding jpeg
 of my code, and put it on github. yes, it was ffjpeg library. i tried my best, to make code
 simple and easy to read. for your reference.
 
+how to compile
+==============
+you need a mingw32 enviroment, then execute commmand:
+make
+
+you will get ffjpeg.exe and ffjpeg.dll files.
+
+how to test
+===========
+ffjpeg -d test.jpg
+will decode test.jpg file into decode.bmp, you can use a picture viewer to watch it.
+
+ffjpeg -e test.bmp
+will encode test.bmp file into encode.jpg, you can use a picture viewer to watch it.
+
 want to learn more?
 ==================
 want to learn more about ffjpeg, please visit our wiki.
