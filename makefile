@@ -1,11 +1,9 @@
 # makefile for ffjpeg project
 # written by rockcarry
 
-# 编译器定义
-CC      = i586-mingw32msvc-gcc
+CC      = gcc
 CCFLAGS = -Wall
 
-# 所有的目标文件
 OBJS = \
     color.o   \
     dct.o     \
@@ -16,14 +14,11 @@ OBJS = \
     bmp.o     \
     jfif.o
 
-# 所有的可执行目标
 EXES = \
     ffjpeg.exe \
 
-# 输出的库文件
 DLL = ffjpeg.dll
 
-# 编译规则
 all : $(DLL) $(EXES)
 
 $(DLL) : $(OBJS)

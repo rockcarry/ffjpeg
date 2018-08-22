@@ -27,8 +27,7 @@ static void int_to_bin_str(int v, char *str, int n) {
     for (i=n-1; i>=0; i--) {
         if (v & (1 << i)) {
             *str++ = '1';
-        }
-        else {
+        } else {
             *str++ = '0';
         }
     }
@@ -157,16 +156,13 @@ static void huffman_encode_init_from_codelist(HUFCODEC *phc)
 #endif
 
         /* ¶Ô templist ÖØÐÂÅÅÐò */
-        for (i=head; i<n-1; i++)
-        {
-            if (templist[i].freq > templist[i+1].freq)
-            {
+        for (i=head; i<n-1; i++) {
+            if (templist[i].freq > templist[i+1].freq) {
                 HUFCODEITEM tempitem;
                 memcpy(&tempitem,        &(templist[i+0]), sizeof(HUFCODEITEM));
                 memcpy(&(templist[i+0]), &(templist[i+1]), sizeof(HUFCODEITEM));
                 memcpy(&(templist[i+1]), &tempitem,        sizeof(HUFCODEITEM));
-            }
-            else break;
+            } else break;
         }
     }
 

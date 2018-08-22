@@ -168,8 +168,7 @@ void* jfif_load(char *file)
 
         if ((type == 0xd8) || (type == 0xd9) || (type == 0x01) || (type >= 0xd0 && type <= 0xd7)) {
             size = 0;
-        }
-        else {
+        } else {
             size  = fgetc(fp) << 8;
             size |= fgetc(fp) << 0;
             size -= 2;
@@ -202,35 +201,43 @@ void* jfif_load(char *file)
             break;
 
         case 0xdb: { // DQT
-                int idx = buf[0] & 0x0f;
-                int f16 = buf[0] & 0xf0;
-                if (!jfif->pqtab[idx]) jfif->pqtab[idx] = malloc(64 * sizeof(int));
-                if (!jfif->pqtab[idx]) break;
-                if (f16) { // 16bit
-                    for (i=0; i<64; i++) {
-                        jfif->pqtab[idx][ZIGZAG[i]] = (buf[1 + i * 2] << 8) | (buf[2 + i * 2] << 0);
+                BYTE *dqt = buf;
+                while (size >= 65) {
+                    int idx = dqt[0] & 0x0f;
+                    int f16 = dqt[0] & 0xf0;
+                    if (!jfif->pqtab[idx]) jfif->pqtab[idx] = malloc(64 * sizeof(int));
+                    if (!jfif->pqtab[idx]) break;
+                    if (f16) { // 16bit
+                        for (i=0; i<64; i++) {
+                            jfif->pqtab[idx][ZIGZAG[i]] = (dqt[1 + i * 2] << 8) | (dqt[2 + i * 2] << 0);
+                        }
+                    } else { // 8bit
+                        for (i=0; i<64; i++) {
+                            jfif->pqtab[idx][ZIGZAG[i]] = dqt[1 + i];
+                        }
                     }
-                }
-                else { // 8bit
-                    for (i=0; i<64; i++) {
-                        jfif->pqtab[idx][ZIGZAG[i]] = buf[1 + i];
-                    }
+                    size -= 1 + 64 * (f16 ? 2 : 1);
+                    dqt  += 1 + 64 * (f16 ? 2 : 1);
                 }
             }
             break;
 
         case 0xc4: { // DHT
-                int idx  = buf[0] & 0x0f;
-                int fac  = buf[0] & 0xf0;
-                int size = 0;
-                for (i=1; i<1+16; i++) size += buf[i];
-                if (fac) {
-                    if (!jfif->phcac[idx]) jfif->phcac[idx] = calloc(1, sizeof(HUFCODEC));
-                    if ( jfif->phcac[idx]) memcpy(jfif->phcac[idx]->huftab, &buf[1], 16 + size);
-                }
-                else {
-                    if (!jfif->phcdc[idx]) jfif->phcdc[idx] = calloc(1, sizeof(HUFCODEC));
-                    if ( jfif->phcdc[idx]) memcpy(jfif->phcdc[idx]->huftab, &buf[1], 16 + size);
+                BYTE *dht = buf;
+                while (size >= 17) {
+                    int idx  = dht[0] & 0x0f;
+                    int fac  = dht[0] & 0xf0;
+                    int len  = 0;
+                    for (i=1; i<1+16; i++) len += dht[i];
+                    if (fac) {
+                        if (!jfif->phcac[idx]) jfif->phcac[idx] = calloc(1, sizeof(HUFCODEC));
+                        if ( jfif->phcac[idx]) memcpy(jfif->phcac[idx]->huftab, &dht[1], 16 + len);
+                    } else {
+                        if (!jfif->phcdc[idx]) jfif->phcdc[idx] = calloc(1, sizeof(HUFCODEC));
+                        if ( jfif->phcdc[idx]) memcpy(jfif->phcdc[idx]->huftab, &dht[1], 16 + len);
+                    }
+                    size -= 17 + len;
+                    dht  += 17 + len;
                 }
             }
             break;
