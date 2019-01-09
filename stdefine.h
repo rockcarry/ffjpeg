@@ -5,12 +5,13 @@
 #if defined(WIN32)
 #include <windows.h>
 #else
+#include <stdint.h>
 #define TRUE     1
 #define FALSE    0
-typedef int            BOOL;
-typedef unsigned char  BYTE;
-typedef unsigned short WORD;
-typedef unsigned long DWORD;
+typedef int      BOOL ;
+typedef uint8_t  BYTE ;
+typedef uint16_t WORD ;
+typedef uint32_t DWORD;
 #endif
 
 //++ for fixed point
