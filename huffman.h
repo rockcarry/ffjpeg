@@ -1,14 +1,14 @@
 #ifndef __FFJPEG_HUFFMAN_H__
 #define __FFJPEG_HUFFMAN_H__
 
-/* °üº¬Í·ÎÄ¼ş */
+/* åŒ…å«å¤´æ–‡ä»¶ */
 #include "stdefine.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* ³£Á¿¶¨Òå */
+/* å¸¸é‡å®šä¹‰ */
 #define MAX_HUFFMAN_CODE_LEN  16
 
 extern const BYTE STD_HUFTAB_LUMIN_AC[];
@@ -16,60 +16,55 @@ extern const BYTE STD_HUFTAB_LUMIN_DC[];
 extern const BYTE STD_HUFTAB_CHROM_AC[];
 extern const BYTE STD_HUFTAB_CHROM_DC[];
 
-/* ÀàĞÍ¶¨Òå */
-/* ±àÂë±íÏîÀàĞÍ¶¨Òå */
+/* ç±»å‹å®šä¹‰ */
+/* ç¼–ç è¡¨é¡¹ç±»å‹å®šä¹‰ */
 typedef struct
 {
-    int symbol; /* ·ûºÅ */
-    int freq;   /* ÆµÂÊ */
-    int group;  /* ·Ö×é */
-    int depth;  /* Âë³¤ */
-    int code;   /* Âë×Ö */
+    int symbol; /* ç¬¦å· */
+    int freq;   /* é¢‘ç‡ */
+    int group;  /* åˆ†ç»„ */
+    int depth;  /* ç é•¿ */
+    int code;   /* ç å­— */
 } HUFCODEITEM;
 
-/* ±àÂëÆ÷ÀàĞÍ¶¨Òå */
+/* ç¼–ç å™¨ç±»å‹å®šä¹‰ */
 typedef struct
 {
-    BYTE         huftab[MAX_HUFFMAN_CODE_LEN + 256]; /* ¹ş·òÂü±í */
-    int          first [MAX_HUFFMAN_CODE_LEN];       /* first    */
-    int          index [MAX_HUFFMAN_CODE_LEN];       /* index    */
-    HUFCODEITEM  codelist[256];/* ±àÂë±í */
+    BYTE         huftab[MAX_HUFFMAN_CODE_LEN + 256]; /* å“ˆå¤«æ›¼è¡¨ */
+    int          first [MAX_HUFFMAN_CODE_LEN];       /* first   */
+    int          index [MAX_HUFFMAN_CODE_LEN];       /* index   */
+    HUFCODEITEM  codelist[256];/* ç¼–ç è¡¨ */
     void        *input;        /* input bit stream  */
     void        *output;       /* output bit stream */
 } HUFCODEC;
 
 
-/* º¯ÊıÉùÃ÷ */
-/* ±ê×¼µÄ·ûºÅÆµÂÊÍ³¼ÆÆ÷ */
+/* å‡½æ•°å£°æ˜ */
+/* æ ‡å‡†çš„ç¬¦å·é¢‘ç‡ç»Ÿè®¡å™¨ */
 void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream);
 
 
-/* ±àÂë */
+/* ç¼–ç  */
 /*
-  ±àÂë·½·¨£º
-      1. ³õÊ¼»¯ HUFCODEC ÖĞµÄ freqlist ³ÉÔ±£¬¿ÉÒÔ²ÉÓÃ
-         huffman_stat_freq ½øĞĞÆµÂÊÍ³¼Æ£¬Ò²¿ÉÒÔ×Ô¼º±à
-         ÂëÊµÏÖÆµÂÊÍ³¼Æ
+  ç¼–ç æ–¹æ³•ï¼š
+      1. åˆå§‹åŒ– HUFCODEC ä¸­çš„ freqlist æˆå‘˜ï¼Œå¯ä»¥é‡‡ç”¨
+         huffman_stat_freq è¿›è¡Œé¢‘ç‡ç»Ÿè®¡ï¼Œä¹Ÿå¯ä»¥è‡ªå·±ç¼–
+         ç å®ç°é¢‘ç‡ç»Ÿè®¡
 
-      2. µ÷ÓÃ huffman_encode_begin º¯Êı½«»áÉú³É huftab,
-         codelist ·Ö±ğ¶ÔÓ¦ÁË¹ş·òÂü±í (JPEG format)ºÍ
-         ±àÂë±í
+      2. è°ƒç”¨ huffman_encode_init å‡½æ•°å°†ä¼šç”Ÿæˆ huftab,
+         codelist åˆ†åˆ«å¯¹åº”äº†å“ˆå¤«æ›¼è¡¨ (JPEG format) å’Œ
+         ç¼–ç è¡¨
 
-      3. Ö¸¶¨ srcbitstr ºÍ destbitstr ·Ö±ğ´ú±í±àÂë¹ı³Ì
-         ÖĞµÄÔ´Êı¾İÁ÷ºÍÄ¿µÄÊı¾İÁ÷
+      3. æŒ‡å®š input å’Œ output åˆ†åˆ«ä»£è¡¨ç¼–ç è¿‡ç¨‹ä¸­çš„è¾“å…¥
+         æ•°æ®æµå’Œè¾“å‡ºæ•°æ®æµ
 
-      4. Ö¸¶¨±àÂë½ø¶È»Øµ÷º¯ÊıÖ¸Õë pps, ÓÃÓÚ±àÂë½ø¶È¿Ø
-         ÖÆ
+      4. è°ƒç”¨ huffman_encode_run å¯ä»¥å®Œæˆè‡ªåŠ¨çš„ç¼–ç æ“
+         ä½œç¼–ç çš„ç»“æŸæ¡ä»¶æ˜¯ input æˆ– output åˆ°è¾¾äº†å°¾éƒ¨
 
-      5. µ÷ÓÃ huffman_encode_run ¿ÉÒÔÍê³É×Ô¶¯µÄ±àÂë²Ù
-         ×÷±àÂëµÄ½áÊøÌõ¼şÊÇ srcbitstr »ò destbitstr µ½
-         ´ïÁËÎ²²¿
+      5. è°ƒç”¨ huffman_encode_done ç»“æŸå“ˆå¤«æ›¼ç¼–ç 
 
-      6. µ÷ÓÃ huffman_encode_done ½áÊø¹ş·òÂü±àÂë
-
-      7. Ò²¿ÉÒÔ²»Í¨¹ı huffman_encode_run ½øĞĞ±àÂë£¬ÔÚ
-         huffman_encode_begin ÒÔºó£¬ÓÃ»§¿ÉÒÔ×Ô¼º¸ù
-         ¾İ codelist Íê³É±àÂë²Ù×÷
+      6. ä¹Ÿå¯ä»¥é€šè¿‡ huffman_encode_step è¿›è¡Œå•æ­¥çš„å“ˆå¤«
+         æ›¼ç¼–ç æ“ä½œ
  */
 // flag == 0, init from code freq list
 // flag == 1, init from huffman table
@@ -77,40 +72,37 @@ void huffman_encode_init(HUFCODEC *phc, int flag);
 void huffman_encode_done(HUFCODEC *phc);
 BOOL huffman_encode_run (HUFCODEC *phc);
 
-/* Ò»´ÎÖ»±àÂëÒ»¸ö·ûºÅ */
+/* ä¸€æ¬¡åªç¼–ç ä¸€ä¸ªç¬¦å· */
 BOOL huffman_encode_step(HUFCODEC *phc, int symbol);
 
 
-/* ½âÂë */
+/* è§£ç  */
 /*
-  ½âÂë·½·¨£º
-      1. ³õÊ¼»¯ HUFCODEC ÖĞµÄ huftab ³ÉÔ±£¬hufman
-         ÊÇ JPEG format µÄ·¶Ê½¹ş·òÂü±í
+  è§£ç æ–¹æ³•ï¼š
+      1. åˆå§‹åŒ– HUFCODEC ä¸­çš„ huftab æˆå‘˜ï¼Œhuftab
+         æ˜¯ JPEG format çš„èŒƒå¼å“ˆå¤«æ›¼è¡¨
 
-      2. µ÷ÓÃ huffman_decode_begin ½«»á¸ù¾İ huftab
-         Éú³É first ºÍ index Á½¸ö±í
+      2. è°ƒç”¨ huffman_decode_init å°†ä¼šæ ¹æ® huftab
+         ç”Ÿæˆ first å’Œ index ä¸¤ä¸ªè¡¨
 
-      3. Ö¸¶¨ srcbitstr ºÍ destbitstr ·Ö±ğ´ú±í½âÂë
-         ¹ı³ÌÖĞµÄÔ´Êı¾İÁ÷ºÍÄ¿µÄÊı¾İÁ÷
+      3. æŒ‡å®š input å’Œ output åˆ†åˆ«ä»£è¡¨è§£ç è¿‡ç¨‹ä¸­çš„è¾“
+         å…¥æ•°æ®æµå’Œè¾“å‡ºæ•°æ®æµ
 
-      4. Ö¸¶¨½âÂë½ø¶È»Øµ÷º¯ÊıÖ¸Õë pps, ÓÃÓÚ½âÂë½ø
-         ¶È¿ØÖÆ
+      4. è°ƒç”¨ huffman_decode_run å¯ä»¥å®Œæˆè‡ªåŠ¨çš„è§£ç 
+         æ“ä½œè§£ç çš„ç»“æŸæ¡ä»¶æ˜¯ input æˆ– output åˆ°è¾¾äº†
+         å°¾éƒ¨
 
-      3. µ÷ÓÃ huffman_decode_run ¿ÉÒÔÍê³É×Ô¶¯µÄ½âÂë
-         ²Ù×÷½âÂëµÄ½áÊøÌõ¼şÊÇ srcbitstr »ò destbitstr
-         µ½´ïÁËÎ²²¿
+      5. è°ƒç”¨ huffman_decode_done ç»“æŸå“ˆå¤«æ›¼è§£ç 
 
-      6. µ÷ÓÃ huffman_decode_done ½áÊø¹ş·òÂü½âÂë
-
-      7. Ò²¿ÉÒÔÍ¨¹ı huffman_decode_one ½øĞĞµ¥²½
-         µÄ¹ş·òÂü½âÂë²Ù×÷£¬¸Ãº¯ÊıÃ¿´Îµ÷ÓÃÖ»»á´ÓÊı
-         ¾İÁ÷ÖĞ½âÂë³öÒ»¸ö·ûºÅ
+      6. ä¹Ÿå¯ä»¥é€šè¿‡ huffman_decode_step è¿›è¡Œå•æ­¥
+         çš„å“ˆå¤«æ›¼è§£ç æ“ä½œï¼Œè¯¥å‡½æ•°æ¯æ¬¡è°ƒç”¨åªä¼šä»æ•°
+         æ®æµä¸­è§£ç å‡ºä¸€ä¸ªç¬¦å·
  */
 void huffman_decode_init(HUFCODEC *phc);
 void huffman_decode_done(HUFCODEC *phc);
 BOOL huffman_decode_run (HUFCODEC *phc);
 
-/* Ò»´ÎÖ»½âÂëÒ»¸ö·ûºÅ */
+/* ä¸€æ¬¡åªè§£ç ä¸€ä¸ªç¬¦å· */
 int  huffman_decode_step(HUFCODEC *phc);
 
 #ifdef __cplusplus
