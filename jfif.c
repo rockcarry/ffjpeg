@@ -189,7 +189,7 @@ void* jfif_load(char *file)
             break;
 
         case 0xda: // SOS
-            jfif->comp_num = buf[0];
+            jfif->comp_num = buf[0] < 4 ? buf[0] : 4;
             for (i=0; i<jfif->comp_num; i++) {
                 jfif->comp_info[i].id = buf[1 + i * 2];
                 jfif->comp_info[i].htab_idx_ac = (buf[2 + i * 2] >> 0) & 0x0f;
@@ -224,11 +224,12 @@ void* jfif_load(char *file)
 
         case 0xc4: { // DHT
                 BYTE *dht = buf;
-                while (size >= 17) {
+                while (size >= 17 && dht + 1 < buf + 0x10000) {
                     int idx  = dht[0] & 0x0f;
                     int fac  = dht[0] & 0xf0;
                     int len  = 0;
                     for (i=1; i<1+16; i++) len += dht[i];
+                    if (len > 256) len = 256;
                     if (fac) {
                         if (!jfif->phcac[idx]) jfif->phcac[idx] = calloc(1, sizeof(HUFCODEC));
                         if ( jfif->phcac[idx]) memcpy(jfif->phcac[idx]->huftab, &dht[1], 16 + len);
