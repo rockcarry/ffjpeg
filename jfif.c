@@ -179,12 +179,12 @@ void* jfif_load(char *file)
         case 0xc0: // SOF0
             jfif->width    = (buf[3] << 8) | (buf[4] << 0);
             jfif->height   = (buf[1] << 8) | (buf[2] << 0);
-            jfif->comp_num = buf[5];
+            jfif->comp_num =  buf[5] < 4 ? buf[5] : 4;
             for (i=0; i<jfif->comp_num; i++) {
                 jfif->comp_info[i].id = buf[6 + i * 3];
                 jfif->comp_info[i].samp_factor_v = (buf[7 + i * 3] >> 0) & 0x0f;
                 jfif->comp_info[i].samp_factor_h = (buf[7 + i * 3] >> 4) & 0x0f;
-                jfif->comp_info[i].qtab_idx      =  buf[8 + i * 3];
+                jfif->comp_info[i].qtab_idx      =  buf[8 + i * 3] & 0x0f;
             }
             break;
 

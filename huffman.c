@@ -368,7 +368,7 @@ int huffman_decode_step(HUFCODEC *phc)
     int idx  = 0;
 
     /* 检查输入输出数据流的有效性 */
-    if (!phc->input) return EOF;
+    if (!phc || !phc->input) return EOF;
 
     /* 从输入流读取码字 */
     while (1) {
