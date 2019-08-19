@@ -1,4 +1,4 @@
-#ifndef __FFJPEG_HUFFMAN_H__
+﻿#ifndef __FFJPEG_HUFFMAN_H__
 #define __FFJPEG_HUFFMAN_H__
 
 /* 包含头文件 */
