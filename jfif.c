@@ -221,7 +221,7 @@ void* jfif_load(char *file)
 
         case 0xc4: // DHT
             dht = buf;
-            while (size > 0 && dht < end) {
+            while (size > 0 && dht + 17 < end) {
                 int idx = dht[0] & 0x0f;
                 int fac = dht[0] & 0xf0;
                 int len = 0;
