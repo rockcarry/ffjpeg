@@ -204,7 +204,7 @@ void* jfif_load(char *file)
 
         case 0xdb: // DQT
             dqt = buf;
-            while (dqt < end) {
+            while (size > 0 && dqt < end) {
                 int idx = dqt[0] & 0x0f;
                 int f16 = dqt[0] & 0xf0;
                 if (!jfif->pqtab[idx]) jfif->pqtab[idx] = malloc(64 * sizeof(int));
@@ -215,12 +215,13 @@ void* jfif_load(char *file)
                     }
                 }
                 dqt += 1 + 64 + (f16 ? 64 : 0);
+                size-= 1 + 64 + (f16 ? 64 : 0);
             }
             break;
 
         case 0xc4: // DHT
             dht = buf;
-            while (dht < end) {
+            while (size > 0 && dht < end) {
                 int idx = dht[0] & 0x0f;
                 int fac = dht[0] & 0xf0;
                 int len = 0;
@@ -235,6 +236,7 @@ void* jfif_load(char *file)
                     if ( jfif->phcdc[idx]) memcpy(jfif->phcdc[idx]->huftab, &dht[1], 16 + len);
                 }
                 dht += 17 + len;
+                size-= 17 + len;
             }
             break;
         }
