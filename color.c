@@ -10,7 +10,7 @@
     g = (y - 0.34414f * u - 0.71414f * v);
     b = (y + 1.77200f * u               );
 */
-// yuv - 32bit signed fixed q12
+// yuv - 32bit signed fixed q11
 // rgb - 8bits unsigned integer
 void yuv_to_rgb(int y, int u, int v, BYTE *r, BYTE *g, BYTE *b)
 {
