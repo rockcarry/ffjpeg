@@ -4,5 +4,5 @@
 *.exe
 *.bmp
 *.jpg
-/src/ffjpeg
+ffjpeg
 

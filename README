@@ -27,8 +27,9 @@ simple and easy to read. for your reference.
 how to compile
 ==============
 you need a mingw32 or linux gcc enviroment, then execute commmand:
-cd src
+```
 make
+```
 
 you will get ffjpeg.exe or (ffjpeg on linux) file.
 
