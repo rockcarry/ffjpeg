@@ -2,4 +2,6 @@
 *.o
 *.a
 *.exe
+*.bmp
+*.jpg
 
