@@ -26,10 +26,10 @@ simple and easy to read. for your reference.
 
 how to compile
 ==============
-you need a mingw32 enviroment, then execute commmand:
+you need a mingw32 or linux gcc enviroment, then execute commmand:
 make
 
-you will get ffjpeg.exe and ffjpeg.dll files.
+you will get ffjpeg.exe or (ffjpeg on linux) file.
 
 how to test
 ===========
