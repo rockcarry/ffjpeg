@@ -225,6 +225,7 @@ int bitstr_seek(void *stream, long offset, int origin)
 long bitstr_tell(void *stream)
 {
     int type = *(int*)stream;
+    if (!stream) return EOF;
     switch (type) {
     case BITSTR_MEM : return mbitstr_tell(stream);
     case BITSTR_FILE: return fbitstr_tell(stream);
