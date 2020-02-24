@@ -15,13 +15,8 @@ OBJS = \
     bmp.o     \
     jfif.o
 
-LIB  = ffjpeg.a
-
+LIB  = libffjpeg.a
 PROG = ffjpeg
-
-ifeq ($(OS),Windows_NT)
-    PROG := $(PROG).exe
-endif
 
 all : $(LIB) $(PROG)
 
@@ -37,6 +32,7 @@ $(PROG) : $(PROG).o $(LIB)
 clean :
 	-rm -f *.o
 	-rm -f *.a
+	-rm -f *.exe
 	-rm -f $(PROG)
 
 # rockcarry
