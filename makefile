@@ -2,6 +2,7 @@
 # written by rockcarry
 
 CC      = gcc
+AR      = ar
 CCFLAGS = -Wall
 
 OBJS = \
@@ -17,12 +18,12 @@ OBJS = \
 EXES = \
     ffjpeg.exe \
 
-DLL = ffjpeg.dll
+LIB = ffjpeg.a
 
-all : $(DLL) $(EXES)
+all : $(LIB) $(EXES)
 
-$(DLL) : $(OBJS)
-	$(CC) $(CCFLAGS) -o $@ $(OBJS) --share
+$(LIB) : $(OBJS)
+	$(AR) rcs $@ $(OBJS)
 
 %.o : %.c %.h stdefine.h
 	$(CC) $(CCFLAGS) -o $@ $< -c
@@ -36,26 +37,25 @@ $(DLL) : $(OBJS)
 %.o : %.cpp stdefine.h
 	$(CC) $(CCFLAGS) -o $@ $< -c
 
-%.exe : %.c %.h $(DLL)
-	$(CC) $(CCFLAGS) -o $@ $< $(DLL)
+%.exe : %.c %.h $(LIB)
+	$(CC) $(CCFLAGS) -o $@ $< $(LIB)
 
-%.exe : %.cpp %.h $(DLL)
-	$(CC) $(CCFLAGS) -o $@ $< $(DLL)
+%.exe : %.cpp %.h $(LIB)
+	$(CC) $(CCFLAGS) -o $@ $< $(LIB)
 
-%.exe : %.c $(DLL)
-	$(CC) $(CCFLAGS) -o $@ $< $(DLL)
+%.exe : %.c $(LIB)
+	$(CC) $(CCFLAGS) -o $@ $< $(LIB)
 
-%.exe : %.cpp $(DLL)
-	$(CC) $(CCFLAGS) -o $@ $< $(DLL)
+%.exe : %.cpp $(LIB)
+	$(CC) $(CCFLAGS) -o $@ $< $(LIB)
 
 clean :
 	-rm -f *.o
-	-rm -f *.dll
+	-rm -f *.a
 	-rm -f *.exe
 
 # rockcarry
-# 2016.1.5
+# 2020.2.22
 # THE END
-
 
 
