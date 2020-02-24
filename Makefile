@@ -15,12 +15,15 @@ OBJS = \
     bmp.o     \
     jfif.o
 
-EXES = \
-    ffjpeg.exe \
+LIB  = ffjpeg.a
 
-LIB = ffjpeg.a
+PROG = ffjpeg
 
-all : $(LIB) $(EXES)
+ifeq ($(OS),Windows_NT)
+    PROG := $(PROG).exe
+endif
+
+all : $(LIB) $(PROG)
 
 $(LIB) : $(OBJS)
 	$(AR) rcs $@ $(OBJS)
@@ -28,31 +31,13 @@ $(LIB) : $(OBJS)
 %.o : %.c %.h stdefine.h
 	$(CC) $(CCFLAGS) -o $@ $< -c
 
-%.o : %.cpp %.h stdefine.h
-	$(CC) $(CCFLAGS) -o $@ $< -c
-
-%.o : %.c stdefine.h
-	$(CC) $(CCFLAGS) -o $@ $< -c
-
-%.o : %.cpp stdefine.h
-	$(CC) $(CCFLAGS) -o $@ $< -c
-
-%.exe : %.c %.h $(LIB)
-	$(CC) $(CCFLAGS) -o $@ $< $(LIB)
-
-%.exe : %.cpp %.h $(LIB)
-	$(CC) $(CCFLAGS) -o $@ $< $(LIB)
-
-%.exe : %.c $(LIB)
-	$(CC) $(CCFLAGS) -o $@ $< $(LIB)
-
-%.exe : %.cpp $(LIB)
+$(PROG) : $(PROG).o $(LIB)
 	$(CC) $(CCFLAGS) -o $@ $< $(LIB)
 
 clean :
 	-rm -f *.o
 	-rm -f *.a
-	-rm -f *.exe
+	-rm -f $(PROG)
 
 # rockcarry
 # 2020.2.22
