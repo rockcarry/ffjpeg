@@ -8,13 +8,8 @@
 extern "C" {
 #endif
 
-enum {
-    BITSTR_MEM = 0,
-    BITSTR_FILE,
-};
-
 /* º¯ÊıÉùÃ÷ */
-void* bitstr_open (int type, char *file, char *mode);
+void* bitstr_open (void *fnamebuf, char *fmode, int bufsize);
 int   bitstr_close(void *stream);
 int   bitstr_getc (void *stream);
 int   bitstr_putc (int c, void *stream);

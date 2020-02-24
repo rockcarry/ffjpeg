@@ -1,5 +1,6 @@
 // 包含头文件
 #include <stdlib.h>
+#include <string.h>
 #include "stdefine.h"
 #include "bitstr.h"
 
@@ -9,6 +10,11 @@
 //+++ memory bitstr +++//
 
 /* 内部类型定义 */
+enum {
+    BITSTR_MEM = 0,
+    BITSTR_FILE,
+};
+
 typedef struct {
     int   type;
     DWORD bitbuf;
@@ -167,13 +173,13 @@ static int fbitstr_flush(void *stream)
 
 
 // 函数实现
-void* bitstr_open(int type, char *file, char *mode)
+void* bitstr_open(void *fnamebuf, char *fmode, int bufsize)
 {
-    switch (type) {
-    case BITSTR_MEM : return mbitstr_open((void*)file, (int  )mode);
-    case BITSTR_FILE: return fbitstr_open((char*)file, (char*)mode);
+    if (strcmp(fmode, "mem") == 0) {
+        return mbitstr_open((void*)fnamebuf, bufsize);
+    } else {
+        return fbitstr_open((char*)fnamebuf, fmode);
     }
-    return NULL;
 }
 
 int bitstr_close(void *stream)
