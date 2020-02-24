@@ -1,6 +1,6 @@
 !.gitignore
 *.o
-*.dll
+*.a
 *.exe
 !release/*
 
