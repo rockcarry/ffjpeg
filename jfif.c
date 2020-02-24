@@ -422,6 +422,8 @@ int jfif_decode(void *ctxt, BMP *pb)
             sfv_max = jfif->comp_info[c].samp_factor_v;
         }
     }
+    if (!sfh_max) sfh_max = 1;
+    if (!sfv_max) sfv_max = 1;
     mcuw = sfh_max * 8;
     mcuh = sfv_max * 8;
     jw = ALIGN(jfif->width , mcuw);
