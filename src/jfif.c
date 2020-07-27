@@ -264,6 +264,7 @@ int jfif_save(void *ctxt, char *file)
     int   i, j;
     int   ret  = -1;
 
+    if (!jfif) return ret;
     fp = fopen(file, "wb");
     if (!fp) goto done;
 
@@ -730,9 +731,9 @@ void* jfif_encode(BMP *pb)
     // init jw & jw, init yuv data buffer
     jw = ALIGN(pb->width , 16);
     jh = ALIGN(pb->height, 16);
-    yuv_datbuf[0] = calloc(1, jw * jh / 1 * sizeof(int));
-    yuv_datbuf[1] = calloc(1, jw * jh / 4 * sizeof(int));
-    yuv_datbuf[2] = calloc(1, jw * jh / 4 * sizeof(int));
+    yuv_datbuf[0] = calloc(1, sizeof(int) * jw * jh / 1);
+    yuv_datbuf[1] = calloc(1, sizeof(int) * jw * jh / 4);
+    yuv_datbuf[2] = calloc(1, sizeof(int) * jw * jh / 4);
     if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2]) {
         goto done;
     }
