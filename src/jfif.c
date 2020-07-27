@@ -384,9 +384,9 @@ int jfif_decode(void *ctxt, BMP *pb)
     int   i, j, c, h, v, x, y;
     int   sfh_max = 0;
     int   sfv_max = 0;
-    int   yuv_stride[3] = {0};
-    int   yuv_height[3] = {0};
-    int  *yuv_datbuf[3] = {0};
+    int   yuv_stride[4] = {0};
+    int   yuv_height[4] = {0};
+    int  *yuv_datbuf[4] = {0};
     int  *idst, *isrc;
     int  *ysrc, *usrc, *vsrc;
     BYTE *bdst;
@@ -436,13 +436,16 @@ int jfif_decode(void *ctxt, BMP *pb)
     yuv_stride[0] = jw;
     yuv_stride[1] = jw * jfif->comp_info[1].samp_factor_h / sfh_max;
     yuv_stride[2] = jw * jfif->comp_info[2].samp_factor_h / sfh_max;
+    yuv_stride[3] = jw * jfif->comp_info[3].samp_factor_h / sfh_max;
     yuv_height[0] = jh;
     yuv_height[1] = jh * jfif->comp_info[1].samp_factor_v / sfv_max;
     yuv_height[2] = jh * jfif->comp_info[2].samp_factor_v / sfv_max;
+    yuv_height[3] = jh * jfif->comp_info[3].samp_factor_v / sfv_max;
     yuv_datbuf[0] = malloc(sizeof(int) * yuv_stride[0] * yuv_height[0]);
     yuv_datbuf[1] = malloc(sizeof(int) * yuv_stride[1] * yuv_height[1]);
     yuv_datbuf[2] = malloc(sizeof(int) * yuv_stride[2] * yuv_height[2]);
-    if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2]) {
+    yuv_datbuf[3] = malloc(sizeof(int) * yuv_stride[3] * yuv_height[3]);
+    if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2] || yuv_datbuf[3]) {
         goto done;
     }
 
@@ -560,6 +563,7 @@ done:
     if (yuv_datbuf[0]) free(yuv_datbuf[0]);
     if (yuv_datbuf[1]) free(yuv_datbuf[1]);
     if (yuv_datbuf[2]) free(yuv_datbuf[2]);
+    if (yuv_datbuf[3]) free(yuv_datbuf[3]);
     //++ free ftab
     for (i=0; i<16; i++) {
         if (ftab[i]) {
