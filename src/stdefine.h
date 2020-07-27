@@ -19,6 +19,8 @@ typedef uint32_t DWORD;
 #define FLOAT2FIX(f)  ((int)((f) * (1 << 11)))
 //-- for fixed point
 
+#define ALIGN(x, y) (((x) + (y) - 1) & ~((y) - 1))
+
 #endif
 
 

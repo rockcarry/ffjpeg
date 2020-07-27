@@ -117,11 +117,6 @@ static void dump_du(int *du)
 }
 #endif
 
-static int ALIGN(int x, int y) {
-    // y must be a power of 2.
-    return (x + y - 1) & ~(y - 1);
-}
-
 static void category_encode(int *code, int *size)
 {
     unsigned absc = abs(*code);

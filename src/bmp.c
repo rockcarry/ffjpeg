@@ -28,12 +28,6 @@ typedef struct {
 } BMPFILEHEADER;
 #pragma pack()
 
-/* 内部函数实现 */
-static int ALIGN(int x, int y) {
-    // y must be a power of 2.
-    return (x + y - 1) & ~(y - 1);
-}
-
 /* 函数实现 */
 int bmp_load(BMP *pb, char *file)
 {
@@ -46,10 +40,10 @@ int bmp_load(BMP *pb, char *file)
     if (!fp) return -1;
 
     fread(&header, sizeof(header), 1, fp);
-    pb->width  = header.biWidth;
-    pb->height = header.biHeight;
-    pb->stride = ALIGN(header.biWidth * 3, 4);
-    pb->pdata  = malloc(pb->stride * pb->height);
+    pb->width  = (int)header.biWidth  > 0 ? (int)header.biWidth  : 0;
+    pb->height = (int)header.biHeight > 0 ? (int)header.biHeight : 0;
+    pb->stride = ALIGN(pb->width * 3, 4);
+    pb->pdata  = malloc((size_t)pb->stride * pb->height);
     if (pb->pdata) {
         pdata  = (BYTE*)pb->pdata + pb->stride * pb->height;
         for (i=0; i<pb->height; i++) {
@@ -64,10 +58,10 @@ int bmp_load(BMP *pb, char *file)
 
 int bmp_create(BMP *pb, int w, int h)
 {
-    pb->width  = w;
-    pb->height = h;
-    pb->stride = ALIGN(w * 3, 4);
-    pb->pdata  = malloc(pb->stride * h);
+    pb->width  = abs(w);
+    pb->height = abs(h);
+    pb->stride = ALIGN(pb->width * 3, 4);
+    pb->pdata  = malloc((size_t)pb->stride * h);
     return pb->pdata ? 0 : -1;
 }
 
