@@ -439,9 +439,9 @@ int jfif_decode(void *ctxt, BMP *pb)
     yuv_height[0] = jh;
     yuv_height[1] = jh * jfif->comp_info[1].samp_factor_v / sfv_max;
     yuv_height[2] = jh * jfif->comp_info[2].samp_factor_v / sfv_max;
-    yuv_datbuf[0] = malloc(yuv_stride[0] * yuv_height[0] * sizeof(int));
-    yuv_datbuf[1] = malloc(yuv_stride[1] * yuv_height[1] * sizeof(int));
-    yuv_datbuf[2] = malloc(yuv_stride[2] * yuv_height[2] * sizeof(int));
+    yuv_datbuf[0] = malloc(sizeof(int) * yuv_stride[0] * yuv_height[0]);
+    yuv_datbuf[1] = malloc(sizeof(int) * yuv_stride[1] * yuv_height[1]);
+    yuv_datbuf[2] = malloc(sizeof(int) * yuv_stride[2] * yuv_height[2]);
     if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2]) {
         goto done;
     }
