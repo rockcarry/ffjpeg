@@ -540,9 +540,9 @@ int jfif_decode(void *ctxt, BMP *pb)
         for (j=0; j<jfif->width; j++) {
             int ux = j * jfif->comp_info[1].samp_factor_h / sfh_max;
             int vx = j * jfif->comp_info[2].samp_factor_h / sfh_max;
-            usrc = yuv_datbuf[2] + uy * yuv_stride[2] + ux;
-            vsrc = yuv_datbuf[1] + vy * yuv_stride[1] + vx;
-            yuv_to_rgb(*ysrc, *vsrc, *usrc, bdst + 2, bdst + 1, bdst + 0);
+            usrc = yuv_datbuf[1] + uy * yuv_stride[1] + ux;
+            vsrc = yuv_datbuf[2] + vy * yuv_stride[2] + vx;
+            yuv_to_rgb(*ysrc, *usrc, *vsrc, bdst + 2, bdst + 1, bdst + 0);
             bdst += 3;
             ysrc += 1;
         }
