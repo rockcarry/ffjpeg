@@ -441,7 +441,7 @@ int jfif_decode(void *ctxt, BMP *pb)
     yuv_datbuf[1] = malloc(sizeof(int) * yuv_stride[1] * yuv_height[1]);
     yuv_datbuf[2] = malloc(sizeof(int) * yuv_stride[2] * yuv_height[2]);
     yuv_datbuf[3] = malloc(sizeof(int) * yuv_stride[3] * yuv_height[3]);
-    if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2] || yuv_datbuf[3]) {
+    if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2] || !yuv_datbuf[3]) {
         goto done;
     }
 
