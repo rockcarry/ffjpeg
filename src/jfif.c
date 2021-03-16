@@ -183,6 +183,8 @@ void* jfif_load(char *file)
                 jfif->comp_info[i].samp_factor_v = (buf[7 + i * 3] >> 0) & 0x0f;
                 jfif->comp_info[i].samp_factor_h = (buf[7 + i * 3] >> 4) & 0x0f;
                 jfif->comp_info[i].qtab_idx      =  buf[8 + i * 3] & 0x0f;
+                if (jfif->comp_info[i].samp_factor_v == 0) jfif->comp_info[i].samp_factor_v = 1;
+                if (jfif->comp_info[i].samp_factor_h == 0) jfif->comp_info[i].samp_factor_h = 1;
             }
             break;
 
