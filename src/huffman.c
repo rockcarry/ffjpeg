@@ -116,8 +116,7 @@ static void huffman_encode_init_from_codelist(HUFCODEC *phc)
     head  = 0;
     group = 256;
 
-    while (head < n - 2) /* 在一个 while 循环中计算码长 */
-    {
+    while (head < n - 2) { /* 在一个 while 循环中计算码长 */
 #if ENABLE_DEBUG_DUMP
         // dump sorted code list
         dump_huffman_codelist(" sorted -", templist, n, head);
@@ -125,8 +124,7 @@ static void huffman_encode_init_from_codelist(HUFCODEC *phc)
 
         /* 根据 templist 中 head 开始的两个元素的分组情况
            来更新 templist 中 head 之前相应元素的码长和分组 */
-        for (i=0; i<head; i++)
-        {
+        for (i=0; i<head; i++) {
             if (  templist[i].group == templist[head + 0].group
                || templist[i].group == templist[head + 1].group)
             {
@@ -311,8 +309,7 @@ void huffman_decode_init(HUFCODEC *phc)
        index[i] 表示长度为 i+1 的第一个码字的索引 */
     phc->first[0] = 0 ;
     phc->index[0] = MAX_HUFFMAN_CODE_LEN;
-    for (i=1; i<MAX_HUFFMAN_CODE_LEN; i++)
-    {
+    for (i=1; i<MAX_HUFFMAN_CODE_LEN; i++) {
         phc->first[i] = (phc->first[i-1] + phc->huftab[i-1]) << 1;
         phc->index[i] =  phc->index[i-1] + phc->huftab[i-1];
     }

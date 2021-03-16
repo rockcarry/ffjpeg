@@ -18,8 +18,7 @@ extern const BYTE STD_HUFTAB_CHROM_DC[];
 
 /* 类型定义 */
 /* 编码表项类型定义 */
-typedef struct
-{
+typedef struct {
     int symbol; /* 符号 */
     int freq;   /* 频率 */
     int group;  /* 分组 */
@@ -28,8 +27,7 @@ typedef struct
 } HUFCODEITEM;
 
 /* 编码器类型定义 */
-typedef struct
-{
+typedef struct {
     BYTE         huftab[MAX_HUFFMAN_CODE_LEN + 256]; /* 哈夫曼表 */
     int          first [MAX_HUFFMAN_CODE_LEN];       /* first   */
     int          index [MAX_HUFFMAN_CODE_LEN];       /* index   */

@@ -111,7 +111,7 @@ static void* fbitstr_open(char *file, char *mode)
         free(context);
         return NULL;
     }
-    else return context;
+    return context;
 }
 
 static int fbitstr_close(void *stream)
