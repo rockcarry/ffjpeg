@@ -184,6 +184,7 @@ void* bitstr_open(void *fnamebuf, char *fmode, int bufsize)
 
 int bitstr_close(void *stream)
 {
+    if (!stream) return EOF;
     int type = *(int*)stream;
     switch (type) {
     case BITSTR_MEM : return mbitstr_close(stream);
@@ -224,8 +225,8 @@ int bitstr_seek(void *stream, long offset, int origin)
 
 long bitstr_tell(void *stream)
 {
-    int type = *(int*)stream;
     if (!stream) return EOF;
+    int type = *(int*)stream;
     switch (type) {
     case BITSTR_MEM : return mbitstr_tell(stream);
     case BITSTR_FILE: return fbitstr_tell(stream);
