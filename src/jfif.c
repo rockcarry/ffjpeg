@@ -443,6 +443,12 @@ int jfif_decode(void *ctxt, BMP *pb)
     yuv_datbuf[1] = malloc(sizeof(int) * yuv_stride[1] * yuv_height[1]);
     yuv_datbuf[2] = malloc(sizeof(int) * yuv_stride[2] * yuv_height[2]);
     yuv_datbuf[3] = malloc(sizeof(int) * yuv_stride[3] * yuv_height[3]);
+    if (  (long long)yuv_stride[0] * yuv_height[0] >= 0x20000000 || (long long)yuv_stride[1] * yuv_height[1] >= 0x20000000
+       || (long long)yuv_stride[2] * yuv_height[2] >= 0x20000000 || (long long)yuv_stride[3] * yuv_height[3] >= 0x20000000)
+    {
+        printf("image's width * height is out of range !\n");
+        goto done;
+    }
     if (!yuv_datbuf[0] || !yuv_datbuf[1] || !yuv_datbuf[2] || !yuv_datbuf[3]) {
         goto done;
     }
