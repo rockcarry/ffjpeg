@@ -86,8 +86,7 @@ void fdct2d8x8(int *data, int *ftab)
 
     /* Pass 1: process rows. */
     dataptr = data;
-    for (ctr=0; ctr<DCTSIZE; ctr++)
-    {
+    for (ctr=0; ctr<DCTSIZE; ctr++) {
         tmp0 = dataptr[0] + dataptr[7];
         tmp7 = dataptr[0] - dataptr[7];
         tmp1 = dataptr[1] + dataptr[6];
@@ -134,8 +133,7 @@ void fdct2d8x8(int *data, int *ftab)
 
     /* Pass 2: process columns. */
     dataptr = data;
-    for (ctr=0; ctr<DCTSIZE; ctr++)
-    {
+    for (ctr=0; ctr<DCTSIZE; ctr++) {
         tmp0 = dataptr[DCTSIZE * 0] + dataptr[DCTSIZE * 7];
         tmp7 = dataptr[DCTSIZE * 0] - dataptr[DCTSIZE * 7];
         tmp1 = dataptr[DCTSIZE * 1] + dataptr[DCTSIZE * 6];
@@ -203,8 +201,7 @@ void idct2d8x8(int *data, int *ftab)
 
     /* Pass 1: process rows. */
     dataptr = data;
-    for (ctr=0; ctr<DCTSIZE; ctr++)
-    {
+    for (ctr=0; ctr<DCTSIZE; ctr++) {
         if ( dataptr[1] + dataptr[2] + dataptr[3] + dataptr[4]
            + dataptr[5] + dataptr[6] + dataptr[7] == 0 )
         {
@@ -276,8 +273,7 @@ void idct2d8x8(int *data, int *ftab)
 
     /* Pass 2: process columns. */
     dataptr = data;
-    for (ctr=0; ctr<DCTSIZE; ctr++)
-    {
+    for (ctr=0; ctr<DCTSIZE; ctr++) {
         /* Even part */
         tmp0 = dataptr[DCTSIZE * 0];
         tmp1 = dataptr[DCTSIZE * 2];
@@ -368,8 +364,7 @@ void fdct2d8x8(float *data)
 
     /* Pass 1: process rows. */
     dataptr = data;
-    for (ctr=0; ctr<DCTSIZE; ctr++)
-    {
+    for (ctr=0; ctr<DCTSIZE; ctr++) {
         tmp0 = dataptr[0] + dataptr[7];
         tmp7 = dataptr[0] - dataptr[7];
         tmp1 = dataptr[1] + dataptr[6];
@@ -416,8 +411,7 @@ void fdct2d8x8(float *data)
 
     /* Pass 2: process columns. */
     dataptr = data;
-    for (ctr=0; ctr<DCTSIZE; ctr++)
-    {
+    for (ctr=0; ctr<DCTSIZE; ctr++) {
         tmp0 = dataptr[DCTSIZE * 0] + dataptr[DCTSIZE * 7];
         tmp7 = dataptr[DCTSIZE * 0] - dataptr[DCTSIZE * 7];
         tmp1 = dataptr[DCTSIZE * 1] + dataptr[DCTSIZE * 6];
@@ -474,8 +468,7 @@ void idct2d8x8(float *data)
 
     /* Pass 1: process rows. */
     dataptr = data;
-    for (ctr=0; ctr<DCTSIZE; ctr++)
-    {
+    for (ctr=0; ctr<DCTSIZE; ctr++) {
         /* Even part */
         tmp0 = dataptr[0];
         tmp1 = dataptr[2];
@@ -532,8 +525,7 @@ void idct2d8x8(float *data)
 
     /* Pass 2: process columns. */
     dataptr = data;
-    for (ctr=0; ctr<DCTSIZE; ctr++)
-    {
+    for (ctr=0; ctr<DCTSIZE; ctr++) {
         /* Even part */
         tmp0 = dataptr[DCTSIZE * 0];
         tmp1 = dataptr[DCTSIZE * 2];
@@ -633,19 +625,15 @@ void initdctmatrix(void)
     if (inited) return;
 
     /* init fdct matrix */
-    for (u=0; u<8; u++)
-    {
-        for (x=0; x<8; x++)
-        {
+    for (u=0; u<8; u++) {
+        for (x=0; x<8; x++) {
             fdctmatrix[u][x] = (float)(c(u) * cos((2.0f * x + 1.0f) * u * M_PI / 16.0f));
         }
     }
 
     /* init idct matrix */
-    for (u=0; u<8; u++)
-    {
-        for (x=0; x<8; x++)
-        {
+    for (u=0; u<8; u++) {
+        for (x=0; x<8; x++) {
             idctmatrix[x][u] = (float)(c(u) * cos((2.0f * x + 1.0f) * u * M_PI / 16.0f));
         }
     }
@@ -656,14 +644,11 @@ void initdctmatrix(void)
 /* 1d 8-points forward dct */
 void fdct1d8(float *u, float *x)
 {
-    int i;
-    int j;
+    int i, j;
 
-    for (i=0; i<8; i++)
-    {
+    for (i=0; i<8; i++) {
         u[i] = 0.0f;
-        for (j=0; j<8; j++)
-        {
+        for (j=0; j<8; j++) {
             u[i] += fdctmatrix[i][j] * x[j];
         }
     }
@@ -672,14 +657,11 @@ void fdct1d8(float *u, float *x)
 /* 1d 8-points invert dct */
 void idct1d8(float *x, float *u)
 {
-    int i;
-    int j;
+    int i, j;
 
-    for (i=0; i<8; i++)
-    {
+    for (i=0; i<8; i++) {
         x[i] = 0.0f;
-        for (j=0; j<8; j++)
-        {
+        for (j=0; j<8; j++) {
             x[i] += idctmatrix[i][j] * u[j];
         }
     }
@@ -695,8 +677,7 @@ void fdct2d8x8(float *data)
     initdctmatrix();
 
     /* 逐行进行 1d fdct */
-    for (i=0; i<8; i++)
-    {
+    for (i=0; i<8; i++) {
         fdct1d8(temp + 8 * i, data + 8 * i);
     }
 
@@ -706,8 +687,7 @@ void fdct2d8x8(float *data)
             *(data + 8 * i + j) = *(temp + 8 * j + i);
 
     /* 逐行进行 1d fdct */
-    for (i=0; i<8; i++)
-    {
+    for (i=0; i<8; i++) {
         fdct1d8(temp + 8 * i, data + 8 * i);
     }
 
@@ -727,8 +707,7 @@ void idct2d8x8(float *data)
     initdctmatrix();
 
     /* 逐行进行 1d idct */
-    for (i=0; i<8; i++)
-    {
+    for (i=0; i<8; i++) {
         idct1d8(temp + 8 * i, data + 8 * i);
     }
 
@@ -738,8 +717,7 @@ void idct2d8x8(float *data)
             *(data + 8 * i + j) = *(temp + 8 * j + i);
 
     /* 逐行进行 1d idct */
-    for (i=0; i<8; i++)
-    {
+    for (i=0; i<8; i++) {
         idct1d8(temp + 8 * i, data + 8 * i);
     }
 
@@ -768,15 +746,11 @@ void fdct2d8x8(float *data)
     float buf[64];
     float temp;
 
-    for (u=0; u<8; u++)
-    {
-        for (v=0; v<8; v++)
-        {
+    for (u=0; u<8; u++) {
+        for (v=0; v<8; v++) {
             temp = 0;
-            for (x=0; x<8; x++)
-            {
-                for (y=0; y<8; y++)
-                {
+            for (x=0; x<8; x++) {
+                for (y=0; y<8; y++) {
                     temp += data[y * 8 + x]
                           * (float)cos((2.0f * x + 1.0f) / 16.0f * u * M_PI)
                           * (float)cos((2.0f * y + 1.0f) / 16.0f * v * M_PI);
@@ -796,15 +770,11 @@ void idct2d8x8(float *data)
     float buf[64];
     float temp;
 
-    for (x=0; x<8; x++)
-    {
-        for (y=0; y<8; y++)
-        {
+    for (x=0; x<8; x++) {
+        for (y=0; y<8; y++) {
             temp = 0;
-            for (u=0; u<8; u++)
-            {
-                for (v=0; v<8; v++)
-                {
+            for (u=0; u<8; u++) {
+                for (v=0; v<8; v++) {
                     temp += alpha(u) * alpha(v) * (data[v * 8 + u]
                           * (float)cos((2.0f * x + 1.0f) / 16.0f * u * M_PI)
                           * (float)cos((2.0f * y + 1.0f) / 16.0f * v * M_PI));

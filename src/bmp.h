@@ -7,8 +7,7 @@ extern "C" {
 
 /* 类型定义 */
 /* BMP 对象的类型定义 */
-typedef struct
-{
+typedef struct {
     int   width;   /* 宽度 */
     int   height;  /* 高度 */
     int   stride;  /* 行字节数 */

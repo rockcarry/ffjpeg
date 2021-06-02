@@ -4,8 +4,6 @@
 #include "stdefine.h"
 #include "bmp.h"
 
-#define TEST_BMP  0
-
 // 内部类型定义
 #pragma pack(1)
 typedef struct { 
@@ -108,7 +106,7 @@ void bmp_free(BMP *pb)
 }
 
 
-#if TEST_BMP
+#ifdef _TEST_BMP_
 int main(void)
 {
     BMP bmp = {0};

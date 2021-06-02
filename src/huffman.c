@@ -5,7 +5,6 @@
 #include "bitstr.h"
 #include "huffman.h"
 
-#define TEST_HUFFMAN       0
 #define ENABLE_DEBUG_DUMP  0
 
 /* 内部函数实现 */
@@ -52,12 +51,10 @@ static void dump_huffman_codelist(char *title, HUFCODEITEM *list, int n, int hea
 /* 统计符号串中各个符号出现的频率 */
 void huffman_stat_freq(HUFCODEITEM codelist[256], void *stream)
 {
-    int  data;
-    int  i;
+    int data, i;
 
     /* 初始化频率表 */
-    for (i=0; i<256; i++)
-    {
+    for (i=0; i<256; i++) {
         codelist[i].symbol = i;
         codelist[i].freq   = 0;
         codelist[i].group  = i;
@@ -426,7 +423,7 @@ const BYTE STD_HUFTAB_CHROM_DC[] =
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
 };
 
-#if TEST_HUFFMAN
+#ifdef _TEST_HUFFMAN_
 int main(void)
 {
     HUFCODEC hufencoder;

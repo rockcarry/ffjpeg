@@ -481,8 +481,7 @@ int jfif_decode(void *ctxt, BMP *pb)
                     if (size) {
                         code = bitstr_get_bits(bs  , size);
                         code = category_decode(code, size);
-                    }
-                    else {
+                    } else {
                         code = 0;
                     }
                     dc[c] += code;
