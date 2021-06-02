@@ -41,6 +41,10 @@ int bmp_load(BMP *pb, char *file)
     pb->width  = (int)header.biWidth  > 0 ? (int)header.biWidth  : 0;
     pb->height = (int)header.biHeight > 0 ? (int)header.biHeight : 0;
     pb->stride = ALIGN(pb->width * 3, 4);
+    if ((long long)pb->stride * pb->height >= 0x80000000) {
+        printf("bmp's width * height is out of range !\n");
+        goto done;
+    }
     pb->pdata  = malloc((size_t)pb->stride * pb->height);
     if (pb->pdata) {
         pdata  = (BYTE*)pb->pdata + pb->stride * pb->height;
@@ -50,7 +54,8 @@ int bmp_load(BMP *pb, char *file)
         }
     }
 
-    fclose(fp);
+done:
+    if (fp) fclose(fp);
     return pb->pdata ? 0 : -1;
 }
 
