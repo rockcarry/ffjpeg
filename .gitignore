@@ -4,5 +4,11 @@
 *.exe
 *.bmp
 *.jpg
+*.user
+*.suo
+*.ncb
 /src/ffjpeg
+Debug
+Release
+
 

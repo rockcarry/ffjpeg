@@ -2,8 +2,9 @@
 #ifndef __STDEFINE_H__
 #define __STDEFINE_H__
 
-#if defined(WIN32)
+#ifdef _MSC_VER
 #include <windows.h>
+#pragma warning(disable:4996)
 #else
 #include <stdint.h>
 #define TRUE     1

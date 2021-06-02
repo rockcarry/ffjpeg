@@ -140,7 +140,7 @@ void* jfif_load(char *file)
     FILE *fp     = NULL;
     int   header = 0;
     int   type   = 0;
-    WORD  size   = 0;
+    int   size   = 0;
     BYTE *buf    = NULL;
     BYTE *end    = NULL;
     BYTE *dqt, *dht;
@@ -172,7 +172,7 @@ void* jfif_load(char *file)
             size -= 2;
         }
 
-        size = fread(buf, 1, size, fp);
+        size = (int)fread(buf, 1, size, fp);
         switch (type) {
         case 0xc0: // SOF0
             jfif->width    = (buf[3] << 8) | (buf[4] << 0);
@@ -223,7 +223,7 @@ void* jfif_load(char *file)
                 int fac = dht[0] & 0xf0;
                 int len = 0;
                 for (i=1; i<1+16; i++) len += dht[i];
-                if (len > end - dht - 17) len = end - dht - 17;
+                if (len > end - dht - 17) len = (int)(end - dht - 17);
                 if (len > 256) len = 256;
                 if (fac) {
                     if (!jfif->phcac[idx]) jfif->phcac[idx] = calloc(1, sizeof(HUFCODEC));
