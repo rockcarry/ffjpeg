@@ -705,10 +705,10 @@ void* jfif_encode(BMP *pb)
     }
 
     // init huffman codec
-    memcpy(jfif->phcac[0]->huftab, STD_HUFTAB_LUMIN_AC, MAX_HUFFMAN_CODE_LEN + 256);
-    memcpy(jfif->phcac[1]->huftab, STD_HUFTAB_CHROM_AC, MAX_HUFFMAN_CODE_LEN + 256);
-    memcpy(jfif->phcdc[0]->huftab, STD_HUFTAB_LUMIN_DC, MAX_HUFFMAN_CODE_LEN + 256);
-    memcpy(jfif->phcdc[1]->huftab, STD_HUFTAB_CHROM_DC, MAX_HUFFMAN_CODE_LEN + 256);
+    memcpy(jfif->phcac[0]->huftab, STD_HUFTAB_LUMIN_AC, sizeof(STD_HUFTAB_LUMIN_AC));
+    memcpy(jfif->phcac[1]->huftab, STD_HUFTAB_CHROM_AC, sizeof(STD_HUFTAB_CHROM_AC));
+    memcpy(jfif->phcdc[0]->huftab, STD_HUFTAB_LUMIN_DC, sizeof(STD_HUFTAB_LUMIN_DC));
+    memcpy(jfif->phcdc[1]->huftab, STD_HUFTAB_CHROM_DC, sizeof(STD_HUFTAB_CHROM_DC));
     jfif->phcac[0]->output = bs; huffman_encode_init(jfif->phcac[0], 1);
     jfif->phcac[1]->output = bs; huffman_encode_init(jfif->phcac[1], 1);
     jfif->phcdc[0]->output = bs; huffman_encode_init(jfif->phcdc[0], 1);
