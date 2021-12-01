@@ -11,10 +11,10 @@ extern "C" {
 /* 常量定义 */
 #define MAX_HUFFMAN_CODE_LEN  16
 
-extern const BYTE STD_HUFTAB_LUMIN_AC[];
-extern const BYTE STD_HUFTAB_LUMIN_DC[];
-extern const BYTE STD_HUFTAB_CHROM_AC[];
-extern const BYTE STD_HUFTAB_CHROM_DC[];
+extern const BYTE STD_HUFTAB_LUMIN_AC[178];
+extern const BYTE STD_HUFTAB_LUMIN_DC[28];
+extern const BYTE STD_HUFTAB_CHROM_AC[178];
+extern const BYTE STD_HUFTAB_CHROM_DC[28];
 
 /* 类型定义 */
 /* 编码表项类型定义 */
