@@ -26,7 +26,10 @@ int main(int argc, char *argv[])
         bmp_save(&bmp, "decode.bmp");
         bmp_free(&bmp);
     } else if (strcmp(argv[1], "-e") == 0) {
-        bmp_load(&bmp, argv[2]);
+        if (bmp_load(&bmp, argv[2]) == -1) {
+            printf("failed to load bmp file: %s !\n", argv[2]);
+            return -1;
+        }
         jfif = jfif_encode(&bmp);
         bmp_free(&bmp);
         jfif_save(jfif, "encode.jpg");
