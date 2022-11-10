@@ -172,7 +172,7 @@ void* jfif_load(char *file)
             size -= 2;
         }
         
-        if(size>=0 && size<=0x10000)
+        if(size>=0 && size<0x10000)
             size = (int)fread(buf, 1, size, fp);
         else
             goto done;
